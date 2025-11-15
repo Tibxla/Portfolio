@@ -1,0 +1,289 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'fontSize': '22px','fontFamily': 'Segoe UI, Calibri, sans-serif'}, 'flowchart': {'useMaxWidth': true}}}%%
+flowchart-elk LR
+
+COURS[📚 Système d'Information et Organisation]
+
+%% === PARTIE 1 : FONDAMENTAUX DE L'INFORMATION ===
+COURS --> CHAP1[📖 Chapitre 1: L'Information]
+
+CHAP1 --> DEF_INFO[🔑 Définition de l'Information]
+DEF_INFO --> INFO_COMP[Composantes de l'Information]
+INFO_COMP --> DONNEE[Données: manipulées par les TI]
+INFO_COMP --> SENS[Sens: attribué par les individus]
+INFO_COMP --> VALEUR[Valeur: aide à la décision]
+
+CHAP1 --> CARAC_INFO[Caractéristiques]
+CARAC_INFO --> FORME[Forme: orale, visuelle, tactile, etc.]
+CARAC_INFO --> QUALITE[Qualité]
+QUALITE --> PRECISE[Précise: pas d'approximation]
+QUALITE --> PERTINENTE[Pertinente: adaptée aux besoins]
+QUALITE --> ACTUELLE[Actuelle: mise à jour]
+QUALITE --> ACCESSIBLE[Accessible: facilement disponible]
+QUALITE --> EXACTE[Exacte: correspond à la réalité]
+
+CARAC_INFO --> COUT[Coût: coût d'obtention]
+CARAC_INFO --> CONTENU[Contenu: quantitative ou qualitative]
+
+CHAP1 --> ROLE_INFO[Rôle de l'Information]
+ROLE_INFO --> DECISION[Prendre des décisions]
+ROLE_INFO --> ACTION[Réaliser des actions]
+
+CHAP1 --> EX_INFO(💡 Exemple: 500€ est une donnée<br/>Le prix de la console X aujourd'hui<br/>est de 500€ est une information)
+
+%% === PARTIE 2 : LE SYSTÈME D'INFORMATION ===
+COURS --> CHAP2[📖 Chapitre 2: Le Système d'Information]
+
+CHAP2 --> DEF_SI[🔑 Définition du SI]
+DEF_SI --> SI_DESC[Ensemble de composantes humaines,<br/>techniques et organisationnelles<br/>pour acquérir, mémoriser, traiter<br/>et communiquer l'information]
+
+CHAP2 --> FONCTIONS_SI[Fonctions du SI]
+FONCTIONS_SI --> F_COLLECTER[Collecter: saisie et consultation BD]
+FONCTIONS_SI --> F_MEMORISER[Mémoriser: stockage sur supports]
+FONCTIONS_SI --> F_TRAITER[Traiter: transformation par programmes]
+FONCTIONS_SI --> F_COMMUNIQUER[Communiquer: transmission entre acteurs]
+
+CHAP2 --> COMPOSANTES_SI[Composantes du SI]
+COMPOSANTES_SI --> C_ORG[Organisationnelle: règles, procédures,<br/>modes de travail]
+COMPOSANTES_SI --> C_TECH[Technologique: informatique et<br/>technologies de communication]
+COMPOSANTES_SI --> C_HUMAINE[Humaine: personnes participant<br/>aux fonctions]
+
+CHAP2 --> ROLES_SI[Rôles du SI]
+ROLES_SI --> R_OPERATIONNEL[Information Opérationnelle]
+R_OPERATIONNEL --> INFO_OP[Information destinée à l'action]
+INFO_OP --> TRANSVERSALE[Transversale au sein des processus<br/>pour coordonner les activités]
+INFO_OP --> EX_OP(💡 Exemple: Bon de commande<br/>permet la préparation du colis)
+
+ROLES_SI --> R_DECISIONNEL[Information Décisionnelle]
+R_DECISIONNEL --> INFO_DEC[Information pour la décision]
+INFO_DEC --> MANAGERIALE[Pilotage de l'organisation]
+INFO_DEC --> STRATEGIQUE[Fixation des objectifs]
+INFO_DEC --> EX_DEC(💡 Exemple: Agrégation des commandes<br/>donne des infos sur les ventes)
+
+ROLES_SI --> R_CONTROLE[Contrôle]
+R_CONTROLE --> INDICATEURS[Indicateurs de résultat<br/>pour évaluer actions et décisions]
+
+%% === PARTIE 3 : PROCESSUS ORGANISATIONNELS ===
+COURS --> CHAP3[📖 Chapitre 3: Processus Organisationnels]
+
+CHAP3 --> DEF_PROCESSUS[🔑 Définition du Processus]
+DEF_PROCESSUS --> PROC_DESC[Ensemble organisé d'activités<br/>déclenché par un événement<br/>orienté vers un résultat]
+
+CHAP3 --> COMPOSANTS_PROC[Composants]
+COMPOSANTS_PROC --> ACTIVITE[Activité: étape du processus]
+ACTIVITE --> TACHES[Ensemble de tâches réalisées<br/>par un acteur qui transforme<br/>des informations]
+
+COMPOSANTS_PROC --> ACTEUR[Acteur]
+ACTEUR --> ACTEUR_INTERNE[Acteur interne: membre de l'organisation]
+ACTEUR --> ACTEUR_EXTERNE[Acteur externe: partenaire ou client]
+ACTEUR --> CLIENT_PROC[Client du processus: bénéficiaire<br/>du résultat]
+
+CHAP3 --> TYPES_PROC[Types de Processus]
+TYPES_PROC --> PROC_METIER[Processus de métier:<br/>réalisation directe du produit]
+TYPES_PROC --> PROC_SUPPORT[Processus de support:<br/>apport de ressources nécessaires]
+TYPES_PROC --> PROC_DIRECTION[Processus de direction:<br/>détermination de la politique]
+
+CHAP3 --> MODELISATION[Modélisation des Processus]
+MODELISATION --> POURQUOI_MOD[🎯 Pourquoi modéliser?]
+POURQUOI_MOD --> ANALYSER[Analyser le fonctionnement actuel]
+POURQUOI_MOD --> CONCEVOIR[Concevoir de nouveaux SI]
+POURQUOI_MOD --> AMELIORER[Améliorer les systèmes existants]
+
+MODELISATION --> QUESTIONS_CLE[Questions clés]
+QUESTIONS_CLE --> Q1[Comment le processus est soutenu?]
+QUESTIONS_CLE --> Q2[Quelles données utilisées/produites?]
+QUESTIONS_CLE --> Q3[Quelles tâches automatisées/manuelles?]
+QUESTIONS_CLE --> Q4[Quels acteurs interagissent avec le SI?]
+
+%% === PARTIE 4 : REPRÉSENTATION DE L'INFORMATION ===
+COURS --> CHAP4[📖 Chapitre 4: Représentation de l'Information]
+
+CHAP4 --> DIAG_FLUX[📐 Diagramme des Flux]
+DIAG_FLUX --> DOMAINE[Domaine d'étude:<br/>délimite l'analyse à des activités précises]
+DIAG_FLUX --> ACTEUR_FLUX[Acteur: émetteur ou récepteur<br/>de flux d'information]
+DIAG_FLUX --> FLUX[Flux: transfert d'information<br/>entre deux acteurs]
+FLUX --> FLUX_ORDRE[Flux peuvent avoir un ordre chronologique]
+FLUX --> FLUX_COND[Flux conditionnels entre crochets]
+FLUX --> MULTI[Multiplicité possible sur les flux]
+
+DIAG_FLUX --> UTILITE_FLUX[⚡ Utilité]
+UTILITE_FLUX --> EXPLICITER[Expliciter le fonctionnement]
+UTILITE_FLUX --> DETECTER[Détecter redondances et incohérences]
+UTILITE_FLUX --> OPTIMISER[Améliorer la circulation d'information]
+
+CHAP4 --> DIAG_EVENT[📐 Modèle Événement-Résultat]
+DIAG_EVENT --> EVENT[Événement: circonstance déclenchant<br/>une réaction du système]
+EVENT --> EVENT_DECL[Événement déclencheur: stimulus]
+EVENT --> EVENT_RES[Événement résultat: produit par activité]
+
+DIAG_EVENT --> OPERATION[Opération: séquence continue<br/>d'actions sans interruption]
+
+DIAG_EVENT --> SYNCHRO[Règle de synchronisation:<br/>pré-condition avec opérateurs<br/>logiques ET, OU, NON]
+
+DIAG_EVENT --> EMISSION[Règle d'émission:<br/>post-condition de production<br/>d'événements résultats]
+
+%% === PARTIE 5 : MODÉLISATION UML ===
+COURS --> CHAP5[📖 Chapitre 5: Modélisation UML]
+
+CHAP5 --> UML_INTRO[🔑 UML: Unified Modeling Language]
+UML_INTRO --> UML_DESC[Langage de modélisation objet unifié<br/>pour représenter graphiquement<br/>les systèmes]
+
+CHAP5 --> USE_CASE[📐 Diagramme des Cas d'Utilisation]
+USE_CASE --> UC_BUT[🎯 Objectif]
+UC_BUT --> UC_B1[Modéliser les besoins des utilisateurs]
+UC_BUT --> UC_B2[Identifier fonctionnalités et limites]
+UC_BUT --> UC_B3[Représenter interactions système-utilisateurs]
+UC_BUT --> UC_VISION[⚠️ Vision utilisateur, pas informatique]
+
+USE_CASE --> UC_ELEMENTS[Éléments du Diagramme]
+
+UC_ELEMENTS --> UC_ACTEUR[Acteur: utilisateur externe]
+UC_ACTEUR --> UC_A_TYPE[Peut être: personne, matériel,<br/>autre système]
+UC_ACTEUR --> UC_A_REPR[Représentation: stick man ou classeur]
+UC_ACTEUR --> UC_A_PRIM[Acteur principal: bénéficie du cas]
+UC_ACTEUR --> UC_A_SEC[Acteur secondaire: sollicité par le cas]
+
+UC_ELEMENTS --> UC_CAS[Cas d'Utilisation:<br/>fonctionnalité du système]
+UC_CAS --> UC_C_REPR[Ellipse avec nom du cas<br/>verbe à l'infinitif]
+UC_CAS --> UC_C_LIMIT[Dans rectangle représentant<br/>les limites du système]
+
+UC_ELEMENTS --> UC_ASSOC[Association: trait reliant<br/>acteur et cas d'utilisation]
+UC_ASSOC --> UC_MULTI[Multiplicité possible]
+
+USE_CASE --> UC_RELATIONS[Relations entre Cas]
+
+UC_RELATIONS --> UC_INCLUDE[Inclusion include]
+UC_INCLUDE --> INC_DESC[Relation impérative et systématique]
+UC_INCLUDE --> INC_USE1[Partager fonctionnalité commune]
+UC_INCLUDE --> INC_USE2[Décomposer cas complexe]
+UC_INCLUDE --> INC_EX(💡 Exemple DAB: S'authentifier<br/>inclus dans Retirer, Consulter, Virer)
+
+UC_RELATIONS --> UC_EXTEND[Extension extend]
+UC_EXTEND --> EXT_DESC[Enrichissement optionnel]
+UC_EXTEND --> EXT_POINT[Point d'extension possible]
+UC_EXTEND --> EXT_COND[Condition exprimée en note]
+UC_EXTEND --> EXT_EX(💡 Exemple: Imprimer un reçu<br/>étend Retirer de l'argent)
+
+UC_RELATIONS --> UC_GENERAL[Généralisation/Spécialisation]
+UC_GENERAL --> GEN_DESC[Sous-cas hérite du comportement<br/>du sur-cas]
+UC_GENERAL --> GEN_ABS[Sur-cas peut être abstrait]
+UC_GENERAL --> GEN_EX(💡 Exemple: Retirer des dollars<br/>et Retirer des euros<br/>spécialisent Retirer de l'argent)
+
+USE_CASE --> UC_DESC[Description Textuelle]
+UC_DESC --> DESC_P1[Partie 1: Identification<br/>Titre, Résumé, Acteurs, Date, Version]
+UC_DESC --> DESC_P2[Partie 2: Scénarios<br/>Pré-conditions, Nominal, Alternatifs,<br/>Exceptions, Post-conditions]
+UC_DESC --> DESC_P3[Partie 3: Exigences non fonctionnelles]
+
+%% === PARTIE 6 : GESTION DE PROJET SI ===
+COURS --> CHAP6[📖 Chapitre 6: Gestion de Projet SI]
+
+CHAP6 --> DEF_PROJET[🔑 Définition du Projet]
+DEF_PROJET --> PROJ_DESC[Opération ponctuelle avec début et fin<br/>nécessitant mise en œuvre de ressources]
+
+CHAP6 --> ENJEUX[⚡ Enjeux du Projet SI]
+ENJEUX --> ENJ_EVOL[Réponse au besoin d'évolution]
+ENJEUX --> ENJ_STRAT[Ordre stratégique]
+ENJEUX --> ENJ_ORG[Ordre organisationnel]
+ENJEUX --> ENJ_TECH[Ordre technologique]
+
+CHAP6 --> ACTEURS_PROJ[Acteurs du Projet]
+ACTEURS_PROJ --> DG[Direction Générale:<br/>responsable évolution stratégique]
+ACTEURS_PROJ --> DSI[DSI: gère nouvelles technologies]
+ACTEURS_PROJ --> UTIL[Utilisateurs: impliqués dans le projet]
+
+CHAP6 --> FACTEURS_CLE[🎯 Facteurs Clés de Réussite]
+FACTEURS_CLE --> F_ENGAGEMENT[Engagement de la direction]
+FACTEURS_CLE --> F_IMPLIC[Implication des utilisateurs]
+FACTEURS_CLE --> F_FORM[Formation à l'utilisation]
+
+CHAP6 --> CDC[Cahier des Charges]
+CDC --> CDC_DESC[Spécifie les besoins avant choix<br/>de l'entité qui va réaliser]
+CDC --> CDC_CONT[Besoins, fonctionnalités,<br/>contraintes techniques et budgétaires]
+
+%% === PARTIE 7 : CYCLE DE VIE ET LIVRABLES ===
+COURS --> CHAP7[📖 Chapitre 7: Cycle de Vie du SI]
+
+CHAP7 --> PHASE1[Phase 1: Analyse des Besoins]
+PHASE1 --> P1_LIV[📄 Livrables]
+P1_LIV --> CDC_LIV[Cahier des charges]
+P1_LIV --> ETUDE_FAIS[Étude de faisabilité]
+P1_LIV --> EXPR_BES[Expression des besoins]
+P1_LIV --> MOD_MET[Modèle métier]
+PHASE1 --> P1_BUT[🎯 Formaliser attentes du client<br/>Clarifier objectifs et contraintes]
+
+CHAP7 --> PHASE2[Phase 2: Conception]
+PHASE2 --> P2_LIV[📄 Livrables]
+P2_LIV --> SFG[Spécifications Fonctionnelles Générales SFG:<br/>vue d'ensemble des fonctionnalités]
+P2_LIV --> SFD[Spécifications Fonctionnelles Détaillées SFD:<br/>détail de chaque fonctionnalité]
+P2_LIV --> SPEC_TECH[Spécifications techniques]
+P2_LIV --> MCD[Modèles de données MCD]
+P2_LIV --> UML_DIAG[Diagrammes UML]
+P2_LIV --> MAQUETTES[Maquettes d'écran]
+PHASE2 --> P2_BUT[🎯 Traduire besoins en solution concrète<br/>Base pour la réalisation]
+
+CHAP7 --> PHASE3[Phase 3: Réalisation]
+PHASE3 --> P3_LIV[📄 Livrables]
+P3_LIV --> CODE[Code source]
+P3_LIV --> SCRIPTS[Scripts d'installation]
+P3_LIV --> DOC_TECH[Documentation technique]
+P3_LIV --> MAN_DEV[Manuels développeurs]
+PHASE3 --> P3_BUT[🎯 Construire le système<br/>Garantir maintenabilité]
+
+CHAP7 --> PHASE4[Phase 4: Tests et Validation]
+PHASE4 --> P4_LIV[📄 Livrables]
+P4_LIV --> PLAN_TEST[Plans de test]
+P4_LIV --> RAPPORT_TEST[Rapports de test]
+P4_LIV --> CAHIER_REC[Cahier de recette]
+P4_LIV --> PV_VALID[PV de validation]
+PHASE4 --> P4_BUT[🎯 Vérifier conformité aux besoins<br/>Corriger anomalies]
+
+CHAP7 --> PHASE5[Phase 5: Déploiement]
+PHASE5 --> P5_LIV[📄 Livrables]
+P5_LIV --> MAN_INSTALL[Manuel d'installation]
+P5_LIV --> MAN_ADMIN[Guide d'administration]
+P5_LIV --> PROC_EXPLOIT[Procédures d'exploitation]
+P5_LIV --> DOS_EXPLOIT[Dossier d'exploitation]
+PHASE5 --> P5_BUT[🎯 Faciliter mise en production<br/>Assurer exploitation fiable]
+
+CHAP7 --> PHASE6[Phase 6: Maintenance et Évolution]
+PHASE6 --> P6_LIV[📄 Livrables]
+P6_LIV --> MAN_USER[Manuels utilisateurs]
+P6_LIV --> FAQ[Support et FAQ]
+P6_LIV --> RAPPORT_MAINT[Rapports de maintenance]
+P6_LIV --> CHANGELOG[Journal des versions]
+P6_LIV --> DOC_MAJ[Documentation mise à jour]
+PHASE6 --> P6_BUT[🎯 Suivre les évolutions<br/>Préserver cohérence]
+
+CHAP7 --> PHASE7[Phase 7: Module Décisionnel optionnel]
+PHASE7 --> P7_LIV[📄 Livrables]
+P7_LIV --> RAPPORTS[Rapports de gestion]
+P7_LIV --> TDB[Tableaux de bord KPI]
+PHASE7 --> P7_BUT[🎯 Piloter l'activité<br/>Prendre décisions éclairées]
+
+%% === PARTIE 8 : EXEMPLE PRATIQUE ODOO ===
+COURS --> CHAP8[📖 Chapitre 8: Exemple d'ERP - Odoo]
+
+CHAP8 --> ODOO_DEF[🔑 Odoo: ERP open-source]
+ODOO_DEF --> ERP_DESC[Enterprise Resource Planning<br/>SI intégré couvrant plusieurs fonctions]
+
+CHAP8 --> ODOO_MOD[Modules Odoo]
+ODOO_MOD --> MOD_VENTE[Ventes]
+ODOO_MOD --> MOD_ACHAT[Achats]
+ODOO_MOD --> MOD_STOCK[Stock]
+ODOO_MOD --> MOD_FACT[Facturation]
+ODOO_MOD --> MOD_RH[Ressources Humaines]
+ODOO_MOD --> MOD_CRM[CRM]
+
+CHAP8 --> ODOO_CARAC[Caractéristiques]
+ODOO_CARAC --> BD_UNIQUE[Base de données unique partagée]
+ODOO_CARAC --> INTEGRATION[Intégration des processus]
+ODOO_CARAC --> AUTOMATISATION[Automatisation des flux]
+
+CHAP8 --> ODOO_EX(💡 Exemple: Commande validée<br/>→ MAJ stock automatique<br/>→ Facture générée)
+
+%% === SYNTHÈSE FINALE ===
+COURS --> SYNTHESE[🌟 Synthèse]
+SYNTHESE --> S1[Le SI est au cœur de l'organisation]
+SYNTHESE --> S2[Il soutient les processus métier]
+SYNTHESE --> S3[Sa qualité est un enjeu stratégique]
+SYNTHESE --> S4[La modélisation permet de comprendre<br/>et d'améliorer le SI]
+SYNTHESE --> S5[Un projet SI répond à un besoin<br/>d'évolution de l'organisation]
