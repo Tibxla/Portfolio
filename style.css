@@ -542,3 +542,35 @@ footer::before {
         page-break-inside: avoid;
     }
 }
+
+/* Style pour le bouton toggle carte mentale */
+.btn-toggle-mindmap {
+    display: block;
+    margin: 1rem auto;
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-toggle-mindmap:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-toggle-mindmap:active {
+    transform: translateY(0);
+}
+
+
+/* Carte mentale cachée par défaut */
+.hidden-mindmap {
+    display: none !important;
+}
+

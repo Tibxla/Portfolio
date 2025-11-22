@@ -82,11 +82,13 @@
                 </div>
             </div>
             <div class="notes-liste">
+                
                 <ul>
                     <li><a href="note de cours.mmd" download>Télécharger la note de cours (format Mermaid)</a></li>
                 </ul>
+                <button id="toggle-mindmap" class="btn-toggle-mindmap">Afficher la carte mentale</button>
             </div>
-            <div class="mermaid-container">
+            <div class="mermaid-container" id="mindmap-container" >
                 <h3>📊 Carte Mentale - Système d'Information et Organisation</h3>
                 <div class="mermaid">
 %%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px','fontFamily': 'Segoe UI, Calibri, sans-serif'}, 'flowchart': {'useMaxWidth': true}}}%%
@@ -581,6 +583,32 @@ SYNTHESE --> S7[Les livrables assurent traçabilité<br/>et pérennité du SI]
     <script>
         // Animation au scroll
         document.addEventListener('DOMContentLoaded', function() {
+            // Toggle carte mentale
+            const toggleBtn = document.getElementById('toggle-mindmap');
+            const mindmapContainer = document.getElementById('mindmap-container');
+            
+            if (toggleBtn && mindmapContainer) {
+                // Cacher après le rendu de Mermaid
+                setTimeout(function() {
+                    mindmapContainer.classList.add('hidden-mindmap');
+                }, 500);
+
+                toggleBtn.addEventListener('click', function() {
+                    if (mindmapContainer.classList.contains('hidden-mindmap')) {
+                        mindmapContainer.classList.remove('hidden-mindmap');
+                        toggleBtn.textContent = 'Masquer la carte mentale';
+                        // Re-render mermaid
+                        const mermaidDiv = mindmapContainer.querySelector('.mermaid');
+                        if (mermaidDiv && !mermaidDiv.querySelector('svg')) {
+                            mermaid.run({ nodes: [mermaidDiv] });
+                        }
+                    } else {
+                        mindmapContainer.classList.add('hidden-mindmap');
+                        toggleBtn.textContent = 'Afficher la carte mentale';
+                    }
+                });
+            }
+
             // Observer pour les animations au scroll
             const observerOptions = {
                 threshold: 0.1,
