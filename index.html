@@ -536,7 +536,7 @@ SYNTHESE --> S7[Les livrables assurent traçabilité<br/>et pérennité du SI]
             <h2>3. Documents d'un système d'information</h2>
             <div class="section-description">
                 <h3>Compétence visée</h3>
-                <p>Identifier, Rediger et organiser des documents liés à un système d'information.</p>
+                <p>Identifier, Rédiger et organiser des documents liés à un système d'information.</p>
                 <div class="critere">
                     <strong>Critères de réussite :</strong> Les documents sont rédigés, classés et bien présentés.
                 </div>
@@ -583,29 +583,17 @@ SYNTHESE --> S7[Les livrables assurent traçabilité<br/>et pérennité du SI]
     <script>
         // Animation au scroll
         document.addEventListener('DOMContentLoaded', function() {
-            // Toggle carte mentale
+            // Toggle carte mentale - Simple
             const toggleBtn = document.getElementById('toggle-mindmap');
             const mindmapContainer = document.getElementById('mindmap-container');
+            let isVisible = true;
             
             if (toggleBtn && mindmapContainer) {
-                // Cacher après le rendu de Mermaid
-                setTimeout(function() {
-                    mindmapContainer.classList.add('hidden-mindmap');
-                }, 500);
-
+                toggleBtn.textContent = 'Masquer la carte mentale';
                 toggleBtn.addEventListener('click', function() {
-                    if (mindmapContainer.classList.contains('hidden-mindmap')) {
-                        mindmapContainer.classList.remove('hidden-mindmap');
-                        toggleBtn.textContent = 'Masquer la carte mentale';
-                        // Re-render mermaid
-                        const mermaidDiv = mindmapContainer.querySelector('.mermaid');
-                        if (mermaidDiv && !mermaidDiv.querySelector('svg')) {
-                            mermaid.run({ nodes: [mermaidDiv] });
-                        }
-                    } else {
-                        mindmapContainer.classList.add('hidden-mindmap');
-                        toggleBtn.textContent = 'Afficher la carte mentale';
-                    }
+                    isVisible = !isVisible;
+                    mindmapContainer.style.display = isVisible ? 'block' : 'none';
+                    toggleBtn.textContent = isVisible ? 'Masquer la carte mentale' : 'Afficher la carte mentale';
                 });
             }
 
