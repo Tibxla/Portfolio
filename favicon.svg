@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      fill: #ffffff;
+      font-size: 55px;
+    }
+    .dot {
+      fill: #3b82f6;
+    }
+  </style>
+  <rect width="100" height="100" rx="20" fill="#030407"/>
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle">
+    TTL<tspan class="dot">.</tspan>
+  </text>
+</svg>
