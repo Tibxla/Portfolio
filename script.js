@@ -373,525 +373,532 @@ const initBackground = () => {
 
 
 // --------------------------------------------------------------------------
-// ID CARD PHYSICS
+// ID CARD PHYSICS - Matter.js Implementation (COMPLETE OVERHAUL)
 // --------------------------------------------------------------------------
+
+// ====== PHYSICS CONFIGURATION ======
+const PHYSICS_CONFIG = {
+    // ====== ROPE ======
+    ropeSegments: 15,            // More segments = smoother curves
+    segmentLength: 8,            // Shorter links = more flexible
+    ropeStiffness: 0.92,         // Slightly elastic for natural stretch
+    ropeDamping: 0.2,            // Damping prevents infinite oscillation
+    segmentMass: 0.0008,         // Light rope segments
+    
+    // ====== CARD ======
+    cardDensity: 0.0006,         // Balanced weight for natural swing
+    cardFriction: 0.3,           // Realistic surface friction
+    cardRestitution: 0.15,       // Minimal bounce
+    cardAirFriction: 0.025,      // Subtle air resistance
+    
+    // ====== DRAG ======
+    dragStiffness: 0.7,          // Responsive but smooth follow
+    dragDamping: 0.4,            // Prevents jitter
+    throwMultiplier: 1.2,        // Velocity boost on release
+    
+    // ====== INTERACTIONS ======
+    hoverEnabled: true,
+    hoverForce: 0.0004,          // Subtle attraction
+    hoverRadius: 180,            // Smaller attraction zone
+    scrollForce: 0.5,            // Natural scroll reaction
+    
+    // ====== 3D TILT ======
+    tiltFromVelocity: 12,        // Degrees from movement speed
+    tiltFromGrab: 28,            // Degrees from grab position
+    tiltFromSwing: 15,           // Degrees from pendulum angle
+    tiltSmoothing: 0.08,         // Slower = smoother interpolation
+    maxTilt: 40,                 // Maximum tilt angle
+    
+    // ====== ENGINE ======
+    gravity: 0.9,
+    positionIterations: 12,
+    velocityIterations: 8,
+    constraintIterations: 14
+};
+
 const initIDCard = () => {
-    const card = document.getElementById('id-card');
+    const cardElement = document.getElementById('id-card');
     const container = document.getElementById('id-card-container');
     const canvas = document.getElementById('lanyard');
 
-    if (!card || !container || !canvas) return;
+    if (!cardElement || !container || !canvas || typeof Matter === 'undefined') {
+        console.warn('[Physics] Matter.js not loaded or elements missing');
+        return;
+    }
 
     const ctx = canvas.getContext('2d');
 
-    // Physics Config - Rigid rope behavior (non-elastic)
-    const config = {
-        segmentCount: 25, // Shorter rope with fewer segments
-        targetSegmentLength: 8, // Target length after animation
-        segmentLength: 0.1, // Start very small for drop animation
-        gravity: 0.6, // Stronger gravity for realistic weight
-        friction: 0.96, // Reduced friction (was 0.985) for more swing/bounce
-        airResistance: 0.98, // Reduced air resistance (was 0.995)
-        iterations: 80, // Very high iterations for extremely rigid constraints (no stretch)
-        strapWidth: 15,
-        pivotX: 0,
-        pivotY: 0,
-        // Wind simulation - disabled for rigid behavior
-        windEnabled: false,
-        windStrength: 0.08,
-        windFrequency: 0.001,
-        // Bounce damping when hitting limits
-        bounceDamping: 0.5, // Strong damping to prevent elastic bounce
-        // Maximum swing angle (radians)
-        maxSwingAngle: Math.PI / 3
-    };
+    // Matter.js module aliases
+    const Engine = Matter.Engine,
+          Bodies = Matter.Bodies,
+          Body = Matter.Body,
+          Composite = Matter.Composite,
+          Constraint = Matter.Constraint;
 
-    // State
-    const nodes = [];
-    let isDragging = false;
-    let dragNode = null;
-    let lastMouse = { x: 0, y: 0 };
-    let dragOffset = { x: 0, y: 0 };
-    let dragVelocity = { x: 0, y: 0 };
+    // Create engine with optimized iterations
+    const engine = Engine.create({
+        gravity: { x: 0, y: PHYSICS_CONFIG.gravity },
+        constraintIterations: PHYSICS_CONFIG.constraintIterations,
+        positionIterations: PHYSICS_CONFIG.positionIterations,
+        velocityIterations: PHYSICS_CONFIG.velocityIterations
+    });
 
-    // Resize & Init
+    const world = engine.world;
+
+    // ====== RESIZE HANDLING ======
     const resize = () => {
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        config.pivotX = window.innerWidth * 0.75; // Right side (75%)
-        config.pivotY = 0; // Top of page
-
-        // Local length: scale segment length to fit window height
-        // Target length: ~25% of window height for slightly longer rope
-        const maxRopeLength = window.innerHeight * 0.50;
-        // Set the TARGET length, not the current length (which is animating)
-        config.targetSegmentLength = Math.max(6, Math.min(10, maxRopeLength / config.segmentCount));
-        // Force full length immediately for falling effect (slack behavior)
-        config.segmentLength = config.targetSegmentLength;
-
-        // Reset or init nodes if empty
-        if (nodes.length === 0) {
-            initNodes();
-        } else {
-            // Update pivot pos of first node (pinned)
-            nodes[0].x = config.pivotX;
-            nodes[0].y = config.pivotY;
-        }
+        canvas.width = container.offsetWidth || window.innerWidth;
+        canvas.height = container.offsetHeight || window.innerHeight;
     };
-
-    const initNodes = () => {
-        nodes.length = 0;
-        let startX = config.pivotX;
-        let startY = config.pivotY; // Start at pivot point
-
-        // Initialize nodes "bunched up" at the pivot point to simulate a drop
-        // We give them a tiny vertical separation so they have a defined order,
-        // but they are mostly all at the top. Gravity will pull them down.
-        for (let i = 0; i < config.segmentCount; i++) {
-            // Start effectively at 0 length, just trivial separation
-            const currentY = startY + i * 1;
-            nodes.push({
-                x: startX,
-                y: currentY,
-                oldX: startX,
-                oldY: currentY,
-                pinned: i === 0
-            });
-        }
-    };
-
     resize();
     window.addEventListener('resize', resize);
 
-    // Time tracking for wind simulation
-    let time = 0;
+    // ====== PIVOT POINT (fixed anchor at top) ======
+    const pivotX = window.innerWidth * 0.75;
+    const pivotY = 0;
 
-    // Physics Loop
-    const updatePhysics = () => {
-        time += 1;
+    const pivot = Bodies.circle(pivotX, pivotY, 5, {
+        isStatic: true,
+        render: { visible: false }
+    });
 
-        // Animate Rope Unfolding (Drop Effect) - REMOVED for natural fall with slack
-        // config.segmentLength is now constant (targetSegmentLength)
+    // ====== ENHANCED ROPE CHAIN ======
+    const ropeSegments = [];
+    const segLength = PHYSICS_CONFIG.segmentLength;
+    const numSegments = PHYSICS_CONFIG.ropeSegments;
 
-        // 1. Verlet Integration with enhanced forces
-        for (let i = 0; i < nodes.length; i++) {
-            const n = nodes[i];
-            if (n.pinned) continue; // Skip pivot
-            if (isDragging && i === nodes.length - 1) continue; // Skip dragged node handling here
-
-            let vx = (n.x - n.oldX) * config.friction;
-            let vy = (n.y - n.oldY) * config.friction;
-
-            // Apply air resistance based on velocity magnitude
-            const speed = Math.sqrt(vx * vx + vy * vy);
-            if (speed > 0.05) {
-                const airDrag = 1 - (speed * 0.002); // Enhanced quadratic drag for stability
-                vx *= Math.max(0.85, airDrag);
-                vy *= Math.max(0.85, airDrag);
-            } else if (speed > 0.01) {
-                // Strong damping for very small movements to reach rest state faster
-                vx *= 0.95;
-                vy *= 0.95;
+    for (let i = 0; i < numSegments; i++) {
+        const progress = i / numSegments; // 0 to 1
+        const segment = Bodies.circle(
+            pivotX, 
+            pivotY + (i + 1) * segLength, 
+            3,
+            {
+                // Graduated mass: heavier near card for natural hang
+                density: PHYSICS_CONFIG.segmentMass * (1 + progress * 0.6),
+                friction: 0.1,
+                // Less air friction at top for fluid motion
+                frictionAir: 0.015 * (1 - progress * 0.4),
+                restitution: 0.05,
+                collisionFilter: { group: -1 },
+                render: { visible: false }
             }
+        );
+        ropeSegments.push(segment);
+    }
 
-            // Wind simulation - gentle ambient motion
-            if (config.windEnabled && !isDragging) {
-                const windPhase = time * config.windFrequency + i * 0.1;
-                const windX = Math.sin(windPhase) * Math.cos(windPhase * 0.7) * config.windStrength;
-                const windY = Math.sin(windPhase * 0.5) * 0.05 * config.windStrength;
+    Composite.add(world, [pivot, ...ropeSegments]);
 
-                // Nodes further down the rope are affected more by wind
-                const windInfluence = (i / nodes.length) * 0.8 + 0.2;
-                vx += windX * windInfluence;
-                vy += windY * windInfluence;
-            }
+    // ====== ROPE CONSTRAINTS (graduated stiffness) ======
+    // First segment to pivot
+    Composite.add(world, Constraint.create({
+        bodyA: pivot,
+        bodyB: ropeSegments[0],
+        pointA: { x: 0, y: 0 },
+        pointB: { x: 0, y: 0 },
+        length: segLength,
+        stiffness: 1.0, // Rigid at top
+        damping: PHYSICS_CONFIG.ropeDamping
+    }));
 
-            n.oldX = n.x;
-            n.oldY = n.y;
+    // Chain segments with graduated stiffness
+    for (let i = 0; i < ropeSegments.length - 1; i++) {
+        const progress = i / ropeSegments.length;
+        // Stiffness decreases slightly toward card for flexibility
+        const stiff = PHYSICS_CONFIG.ropeStiffness - (progress * 0.05);
+        
+        Composite.add(world, Constraint.create({
+            bodyA: ropeSegments[i],
+            bodyB: ropeSegments[i + 1],
+            pointA: { x: 0, y: 0 },
+            pointB: { x: 0, y: 0 },
+            length: segLength,
+            stiffness: stiff,
+            damping: PHYSICS_CONFIG.ropeDamping
+        }));
+    }
 
-            n.x += vx;
-            n.y += vy;
-            n.y += config.gravity;
+    // ====== CARD BODY ======
+    const cardWidth = cardElement.offsetWidth || 260;
+    const cardHeight = cardElement.offsetHeight || 400;
 
-            // Apply air resistance to overall motion
-            n.x += (n.x - n.oldX) * (1 - config.airResistance);
-            n.y += (n.y - n.oldY) * (1 - config.airResistance);
+    const cardBody = Bodies.rectangle(
+        pivotX,
+        pivotY + numSegments * segLength + cardHeight / 2 + 20,
+        cardWidth,
+        cardHeight,
+        {
+            density: PHYSICS_CONFIG.cardDensity,
+            friction: PHYSICS_CONFIG.cardFriction,
+            frictionAir: PHYSICS_CONFIG.cardAirFriction,
+            restitution: PHYSICS_CONFIG.cardRestitution,
+            collisionFilter: { group: -1 },
+            render: { visible: false }
         }
+    );
 
-        // Drag processing
-        if (isDragging && dragNode) {
-            dragNode.x = lastMouse.x - dragOffset.x;
-            dragNode.y = lastMouse.y - dragOffset.y;
-            // No velocity update here, verlet infers it next frame
-        }
+    Composite.add(world, cardBody);
 
-        // 2. Constraints (Stick constraint)
-        for (let k = 0; k < config.iterations; k++) {
-            for (let i = 0; i < nodes.length - 1; i++) {
-                const n1 = nodes[i];
-                const n2 = nodes[i + 1];
+    // ====== ROPE TO CARD CONNECTION (rigid) ======
+    const lastSegment = ropeSegments[ropeSegments.length - 1];
+    const attachPointY = -cardHeight / 2 + 18; // 18px from top edge
+    
+    Composite.add(world, Constraint.create({
+        bodyA: lastSegment,
+        bodyB: cardBody,
+        pointA: { x: 0, y: 0 },
+        pointB: { x: 0, y: attachPointY },
+        length: 8,
+        stiffness: 1.0,  // Completely rigid
+        damping: 0.15
+    }));
 
-                const dx = n2.x - n1.x;
-                const dy = n2.y - n1.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+    // ====== VIEWPORT BOUNDARIES ======
+    const wallThickness = 100;
+    const walls = [
+        Bodies.rectangle(-wallThickness / 2, canvas.height / 2, wallThickness, canvas.height * 2, { isStatic: true }),
+        Bodies.rectangle(canvas.width + wallThickness / 2, canvas.height / 2, wallThickness, canvas.height * 2, { isStatic: true }),
+        Bodies.rectangle(canvas.width / 2, canvas.height + wallThickness / 2, canvas.width * 2, wallThickness, { isStatic: true })
+    ];
+    Composite.add(world, walls);
 
-                // Prevent division by zero / NaN
-                if (dist < 0.01) continue;
+    // ====== ENHANCED DRAG SYSTEM ======
+    let isDragging = false;
+    let dragConstraint = null;
+    let grabTilt = { x: 0, y: 0 };
+    
+    // Velocity tracking for throw
+    let lastMousePos = { x: 0, y: 0 };
+    let mouseVelocity = { x: 0, y: 0 };
+    let containerRect = container.getBoundingClientRect();
 
-                // Slack Constraint: Only pull if stretched beyond limit
-                if (dist > config.segmentLength) {
-                    const diff = config.segmentLength - dist;
-                    const percent = diff / dist / 2;
-                    const offsetX = dx * percent;
-                    const offsetY = dy * percent;
+    const onCardMouseDown = (e) => {
+        isDragging = true;
+        cardElement.style.cursor = 'grabbing';
+        
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
+        
+        containerRect = container.getBoundingClientRect();
+        const mouseX = (e.clientX || e.touches?.[0]?.clientX) - containerRect.left;
+        const mouseY = (e.clientY || e.touches?.[0]?.clientY) - containerRect.top;
 
-                    if (!n1.pinned) {
-                        n1.x -= offsetX;
-                        n1.y -= offsetY;
-                    }
-                    if (!isDragging || i + 1 !== nodes.length - 1) { // Don't constrain dragged last node fully? Actually we want string to pull card.
-                        // If dragging card, card pulls string.
-                        // If not dragging, string pulls card.
-                        if (isDragging && i + 1 === nodes.length - 1) {
-                            // If n2 is dragged, n1 pulled to it. n2 fixed position this subframe.
-                            // So allow n2 update NO. n2 is set by mouse.
-                            // Just update n1.
-                        } else {
-                            n2.x += offsetX;
-                            n2.y += offsetY;
-                        }
-                    }
-                }
-            }
-        }
+        // Calculate grab offset in card's local coordinates
+        const localX = mouseX - cardBody.position.x;
+        const localY = mouseY - cardBody.position.y;
+        const cos = Math.cos(-cardBody.angle);
+        const sin = Math.sin(-cardBody.angle);
+        const grabOffsetX = localX * cos - localY * sin;
+        const grabOffsetY = localX * sin + localY * cos;
 
-        // 3. Render Lanyard
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        dragConstraint = Constraint.create({
+            pointA: { x: mouseX, y: mouseY },
+            bodyB: cardBody,
+            pointB: { x: grabOffsetX, y: grabOffsetY },
+            length: 0,
+            stiffness: PHYSICS_CONFIG.dragStiffness,
+            damping: PHYSICS_CONFIG.dragDamping
+        });
+        Composite.add(world, dragConstraint);
 
-        ctx.beginPath();
-        ctx.moveTo(nodes[0].x, nodes[0].y);
-        for (let i = 1; i < nodes.length; i++) {
-            ctx.lineTo(nodes[i].x, nodes[i].y);
-        }
+        // Normalized grab offset for 3D tilt (-1 to 1)
+        grabTilt.x = Math.max(-1, Math.min(1, grabOffsetX / (cardWidth / 2)));
+        grabTilt.y = Math.max(-1, Math.min(1, grabOffsetY / (cardHeight / 2)));
+        
+        // Initialize velocity tracking
+        lastMousePos = { x: mouseX, y: mouseY };
+        mouseVelocity = { x: 0, y: 0 };
 
-        // Tech Rope Style - Cohérent avec le portfolio
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        // 1. Outer Glow (Blue Accent)
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
-
-        ctx.beginPath();
-        ctx.moveTo(nodes[0].x, nodes[0].y);
-        for (let i = 1; i < nodes.length; i++) {
-            ctx.lineTo(nodes[i].x, nodes[i].y);
-        }
-
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
-        ctx.lineWidth = 16;
-        ctx.stroke();
-
-        // 2. Core (Dark with gradient)
-        ctx.shadowBlur = 0;
-
-        // Create gradient along the rope
-        const gradient = ctx.createLinearGradient(nodes[0].x, nodes[0].y,
-            nodes[nodes.length - 1].x,
-            nodes[nodes.length - 1].y);
-        gradient.addColorStop(0, '#0f172a');
-        gradient.addColorStop(0.5, '#1e293b');
-        gradient.addColorStop(1, '#0f172a');
-
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 10;
-        ctx.stroke();
-
-        // 3. Tech Pattern (Energy Flow)
-        ctx.save();
-        const flowOffset = (Date.now() * 0.001) % 1; // Animated flow
-
-        for (let i = 0; i < nodes.length - 1; i++) {
-            const n1 = nodes[i];
-            const n2 = nodes[i + 1];
-            const dx = n2.x - n1.x;
-            const dy = n2.y - n1.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx);
-
-            ctx.save();
-            ctx.translate(n1.x, n1.y);
-            ctx.rotate(angle);
-
-            // Flowing energy particles
-            const particleSpacing = 20;
-            for (let k = flowOffset * particleSpacing; k < dist; k += particleSpacing) {
-                const alpha = Math.sin(k / particleSpacing + flowOffset * Math.PI * 2) * 0.3 + 0.3;
-                ctx.fillStyle = `rgba(59, 130, 246, ${alpha})`;
-                ctx.fillRect(k - 3, -2, 6, 4);
-            }
-
-            ctx.restore();
-        }
-        ctx.restore();
-
-        // 4. Highlight (Electric Edge)
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = 'rgba(139, 92, 246, 0.6)';
-
-        ctx.beginPath();
-        ctx.moveTo(nodes[0].x, nodes[0].y);
-        for (let i = 1; i < nodes.length; i++) {
-            ctx.lineTo(nodes[i].x, nodes[i].y);
-        }
-        ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.shadowBlur = 0;
-
-        // 5. Branding "TTL." along the rope
-        ctx.save();
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
-        ctx.font = 'bold 10px "Space Grotesk", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
-
-        // Draw "TTL." text at intervals along the rope
-        const textInterval = 5; // Every 5 segments
-        for (let i = 3; i < nodes.length - 3; i += textInterval) {
-            const n = nodes[i];
-            const next = nodes[i + 1] || nodes[i];
-            const textDx = next.x - n.x;
-            const textDy = next.y - n.y;
-            const textAngle = Math.atan2(textDy, textDx);
-
-            ctx.save();
-            ctx.translate(n.x, n.y);
-            ctx.rotate(textAngle);
-            ctx.fillText('TTL.', 0, 0);
-            ctx.restore();
-        }
-        ctx.restore();
-
-        // Draw Tech Connector at the end
-        const tail = nodes[nodes.length - 1];
-        ctx.save();
-        ctx.translate(tail.x, tail.y);
-        // Rotate to match last segment
-        const lastSegDx = tail.x - nodes[nodes.length - 2].x;
-        const lastSegDy = tail.y - nodes[nodes.length - 2].y;
-        const tailAngle = Math.atan2(lastSegDy, lastSegDx);
-        ctx.rotate(tailAngle - Math.PI / 2);
-
-        // Connector with glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
-
-        // Main connector body
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.moveTo(-8, 0);
-        ctx.lineTo(8, 0);
-        ctx.lineTo(6, 18);
-        ctx.lineTo(-6, 18);
-        ctx.closePath();
-        ctx.fill();
-
-        // Accent line
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-5, 5);
-        ctx.lineTo(5, 5);
-        ctx.stroke();
-
-        // Attachment ring with glow
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.6)';
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(0, 22, 7, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner ring detail
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, 22, 4, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.restore();
-
-        // 5. Update Card Position (Attached to last node)
-        const lastNode = nodes[nodes.length - 1];
-        const prevTail = nodes[nodes.length - 2];
-        const prevPrevTail = nodes[nodes.length - 3] || prevTail;
-
-        // Calculate rotation based on average of last segments for smoother angle
-        const cardDx = lastNode.x - prevTail.x;
-        const cardDy = lastNode.y - prevTail.y;
-        const cardDx2 = prevTail.x - prevPrevTail.x;
-        const cardDy2 = prevTail.y - prevPrevTail.y;
-
-        const avgDx = (cardDx + cardDx2) / 2;
-        const avgDy = (cardDy + cardDy2) / 2;
-        const cardAngle = Math.atan2(avgDy, avgDx) - Math.PI / 2; // -90deg because card is vertical
-
-        // Calculate the exact position of the connector ring in global coordinates
-        // The ring is at local position (0, 22) in the rotated connector coordinate system
-        const connectorRingOffset = 22; // Local Y position of the ring in the connector
-        const cardAttachmentFromTop = 18; // Position of attachment point on card from top
-
-        // Transform local ring position to global coordinates using rotation
-        const ringLocalX = 0;
-        const ringLocalY = connectorRingOffset;
-        const ringAngle = tailAngle - Math.PI / 2; // Same rotation as connector
-
-        // Global position of the ring (accounting for rotation)
-        const ringGlobalX = lastNode.x + Math.cos(ringAngle) * ringLocalX - Math.sin(ringAngle) * ringLocalY;
-        const ringGlobalY = lastNode.y + Math.sin(ringAngle) * ringLocalX + Math.cos(ringAngle) * ringLocalY;
-
-        // Update DOM - position card so attachment point aligns with connector ring
-        card.style.left = `${ringGlobalX}px`;
-        card.style.top = `${ringGlobalY - cardAttachmentFromTop}px`;
-
-        // Enhanced 3D Tilt calculation with smoothing
-        // Velocity of tail (using 2-frame average for smoothness)
-        const vx = (lastNode.x - lastNode.oldX);
-        const vy = (lastNode.y - lastNode.oldY);
-
-        // Calculate acceleration for more dynamic feel
-        const ax = vx - (prevTail.x - prevTail.oldX);
-        const ay = vy - (prevTail.y - prevTail.oldY);
-
-        // Combine velocity and acceleration for tilt
-        // Clamp values to prevent extreme tilting
-        const maxTilt = 25;
-        let tiltX = (vy * 1.5 + ay * 0.5);
-        let tiltY = (-vx * 1.5 - ax * 0.5);
-
-        tiltX = Math.max(-maxTilt, Math.min(maxTilt, tiltX));
-        tiltY = Math.max(-maxTilt, Math.min(maxTilt, tiltY));
-
-        // Add subtle wobble based on angular velocity
-        const angularVel = cardAngle - (prevAngularVel || cardAngle);
-        prevAngularVel = cardAngle;
-
-        const wobble = Math.sin(time * 0.1) * Math.abs(angularVel) * 2;
-
-        card.style.transform = `translateX(-50%) rotate(${cardAngle}rad) rotateX(${tiltX + wobble}deg) rotateY(${tiltY}deg)`;
-
-        requestAnimationFrame(updatePhysics);
+        e.preventDefault();
     };
 
-    // Track previous angular velocity for wobble
-    let prevAngularVel = 0;
+    const onMouseMove = (e) => {
+        if (!isDragging || !dragConstraint) return;
+        
+        const mouseX = (e.clientX || e.touches?.[0]?.clientX) - containerRect.left;
+        const mouseY = (e.clientY || e.touches?.[0]?.clientY) - containerRect.top;
 
-    // Scroll Reaction - Reduced for better stability
+        // Track velocity (smoothed)
+        mouseVelocity.x = mouseVelocity.x * 0.7 + (mouseX - lastMousePos.x) * 0.3;
+        mouseVelocity.y = mouseVelocity.y * 0.7 + (mouseY - lastMousePos.y) * 0.3;
+        lastMousePos = { x: mouseX, y: mouseY };
+
+        dragConstraint.pointA = { x: mouseX, y: mouseY };
+    };
+
+    const onMouseUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        cardElement.style.cursor = 'grab';
+        
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+        
+        // Apply throw velocity on release
+        if (dragConstraint) {
+            const throwX = mouseVelocity.x * PHYSICS_CONFIG.throwMultiplier;
+            const throwY = mouseVelocity.y * PHYSICS_CONFIG.throwMultiplier;
+            
+            Body.setVelocity(cardBody, {
+                x: cardBody.velocity.x + throwX,
+                y: cardBody.velocity.y + throwY
+            });
+            
+            Composite.remove(world, dragConstraint);
+            dragConstraint = null;
+        }
+        
+        grabTilt = { x: 0, y: 0 };
+    };
+
+    cardElement.addEventListener('mousedown', onCardMouseDown);
+    cardElement.addEventListener('touchstart', onCardMouseDown, { passive: false });
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('touchmove', onMouseMove, { passive: true });
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchend', onMouseUp, { passive: true });
+
+    // ====== GLOBAL MOUSE TRACKING ======
+    const globalMouse = { x: canvas.width / 2, y: canvas.height / 2 };
+    window.addEventListener('mousemove', (e) => {
+        globalMouse.x = e.clientX;
+        globalMouse.y = e.clientY;
+    });
+
+    // ====== SCROLL REACTION ======
     let lastScrollY = window.scrollY;
     window.addEventListener('scroll', () => {
         const currentScrollY = window.scrollY;
         const delta = currentScrollY - lastScrollY;
         lastScrollY = currentScrollY;
 
-        // Apply subtle force to nodes based on scroll direction/speed
-        // Reduced multipliers for more natural and stable behavior
-        const force = delta * 0.3;
+        const force = delta * PHYSICS_CONFIG.scrollForce * 0.001;
+        Body.applyForce(cardBody, cardBody.position, {
+            x: -force * 0.4,
+            y: -force * 0.15
+        });
 
-        for (let i = 1; i < nodes.length; i++) {
-            // Apply gentle sway and lag proportional to segment position
-            const influence = i / nodes.length; // Nodes further down move more
-            nodes[i].x -= force * 0.1 * influence; // Gentle sway
-            nodes[i].y -= force * 0.05 * influence; // Subtle vertical lag
+        // Push rope segments with graduated influence
+        ropeSegments.forEach((seg, i) => {
+            const influence = (i + 1) / ropeSegments.length;
+            Body.applyForce(seg, seg.position, {
+                x: -force * 0.2 * influence,
+                y: 0
+            });
+        });
+    }, { passive: true });
+
+    // ====== SMOOTHED 3D TILT STATE ======
+    let smoothTiltX = 0;
+    let smoothTiltY = 0;
+    const baseAirFriction = PHYSICS_CONFIG.cardAirFriction;
+
+    // ====== RENDER LOOP ======
+    let time = 0;
+    const render = () => {
+        time++;
+
+        // Update physics engine
+        Engine.update(engine, 1000 / 60);
+
+        // ====== DYNAMIC DAMPING (reduces for large swings) ======
+        const swingAngle = Math.abs(cardBody.angle);
+        const swingVelocity = Math.abs(cardBody.angularVelocity);
+        
+        if (swingAngle > 0.25 || swingVelocity > 0.08) {
+            Body.set(cardBody, 'frictionAir', baseAirFriction * 1.8);
+        } else {
+            Body.set(cardBody, 'frictionAir', baseAirFriction);
         }
-    });
 
-    // Interaction
-    const onDown = (e) => {
-        isDragging = true;
-        card.style.cursor = 'grabbing';
+        // ====== HOVER ATTRACTION ======
+        if (PHYSICS_CONFIG.hoverEnabled && !isDragging) {
+            const dx = globalMouse.x - cardBody.position.x;
+            const dy = globalMouse.y - cardBody.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-        const cx = e.clientX || e.touches[0].clientX;
-        const cy = e.clientY || e.touches[0].clientY;
+            if (dist < PHYSICS_CONFIG.hoverRadius && dist > 60) {
+                const forceMag = PHYSICS_CONFIG.hoverForce * (1 - dist / PHYSICS_CONFIG.hoverRadius);
+                Body.applyForce(cardBody, cardBody.position, {
+                    x: (dx / dist) * forceMag,
+                    y: (dy / dist) * forceMag
+                });
+            }
+        }
 
-        // Calculate Mouse Position in Container relative to rect (same as onMove)
-        const containerRect = container.getBoundingClientRect();
-        const localX = cx - containerRect.left;
-        const localY = cy - containerRect.top;
+        // ====== DRAW ROPE (Smooth Bézier Curves) ======
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        lastMouse = { x: localX, y: localY };
+        // Calculate card attachment point
+        const attachOffsetY = -cardHeight / 2 + 18;
+        const attachX = cardBody.position.x - Math.sin(cardBody.angle) * attachOffsetY;
+        const attachY = cardBody.position.y + Math.cos(cardBody.angle) * attachOffsetY;
 
-        // Drag node is the last one
-        dragNode = nodes[nodes.length - 1];
-
-        // Calculate offset so the card doesn't snap to center
-        dragOffset = {
-            x: localX - dragNode.x,
-            y: localY - dragNode.y
+        // Build smooth Bézier rope path
+        const buildRopePath = () => {
+            ctx.beginPath();
+            ctx.moveTo(pivot.position.x, pivot.position.y);
+            
+            // Quadratic curves through segments
+            for (let i = 0; i < ropeSegments.length - 1; i++) {
+                const curr = ropeSegments[i];
+                const next = ropeSegments[i + 1];
+                const midX = (curr.position.x + next.position.x) / 2;
+                const midY = (curr.position.y + next.position.y) / 2;
+                ctx.quadraticCurveTo(curr.position.x, curr.position.y, midX, midY);
+            }
+            
+            // Final curve to card
+            const lastSeg = ropeSegments[ropeSegments.length - 1];
+            ctx.quadraticCurveTo(lastSeg.position.x, lastSeg.position.y, attachX, attachY);
         };
 
-        // Reset velocity variables
-        dragVelocity = { x: 0, y: 0 };
+        // Outer glow
+        buildRopePath();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
+        ctx.lineWidth = 14;
+        ctx.stroke();
 
-        // Stop physics momentum
-        dragNode.oldX = dragNode.x;
-        dragNode.oldY = dragNode.y;
+        // Core gradient
+        buildRopePath();
+        ctx.shadowBlur = 0;
+        const gradient = ctx.createLinearGradient(
+            pivot.position.x, pivot.position.y,
+            cardBody.position.x, cardBody.position.y
+        );
+        gradient.addColorStop(0, '#0f172a');
+        gradient.addColorStop(0.5, '#1e293b');
+        gradient.addColorStop(1, '#0f172a');
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 8;
+        ctx.stroke();
 
-        e.preventDefault();
-    };
+        // Flowing energy particles
+        ctx.save();
+        const flowOffset = (Date.now() * 0.0008) % 1;
+        for (let i = 0; i < ropeSegments.length - 1; i++) {
+            const n1 = ropeSegments[i];
+            const n2 = ropeSegments[i + 1];
+            const dx = n2.position.x - n1.position.x;
+            const dy = n2.position.y - n1.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
 
-    const onMove = (e) => {
-        if (!isDragging) return;
+            ctx.save();
+            ctx.translate(n1.position.x, n1.position.y);
+            ctx.rotate(angle);
 
-        const cx = e.clientX || e.touches[0].clientX;
-        const cy = e.clientY || e.touches[0].clientY;
+            const particleSpacing = 25;
+            for (let k = flowOffset * particleSpacing; k < dist; k += particleSpacing) {
+                const alpha = Math.sin(k / particleSpacing + flowOffset * Math.PI * 2) * 0.25 + 0.25;
+                ctx.fillStyle = `rgba(59, 130, 246, ${alpha})`;
+                ctx.fillRect(k - 2, -1.5, 4, 3);
+            }
+            ctx.restore();
+        }
+        ctx.restore();
 
-        const containerRect = container.getBoundingClientRect();
+        // Electric edge highlight
+        buildRopePath();
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
 
-        // Calculate Mouse Position in Container
-        const localX = cx - containerRect.left;
-        const localY = cy - containerRect.top;
+        // TTL branding along rope
+        ctx.save();
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+        ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.6)';
+        for (let i = 4; i < ropeSegments.length - 3; i += 6) {
+            const seg = ropeSegments[i];
+            const next = ropeSegments[i + 1] || seg;
+            const textAngle = Math.atan2(next.position.y - seg.position.y, next.position.x - seg.position.x);
+            ctx.save();
+            ctx.translate(seg.position.x, seg.position.y);
+            ctx.rotate(textAngle);
+            ctx.fillText('TTL.', 0, 0);
+            ctx.restore();
+        }
+        ctx.restore();
 
-        // Calculate Velocity (Current - Last)
-        dragVelocity.x = localX - lastMouse.x;
-        dragVelocity.y = localY - lastMouse.y;
+        // Draw connector at card attachment
+        const lastSeg = ropeSegments[ropeSegments.length - 1];
+        const connAngle = Math.atan2(attachY - lastSeg.position.y, attachX - lastSeg.position.x);
+        
+        ctx.save();
+        ctx.translate(attachX, attachY);
+        ctx.rotate(connAngle + Math.PI / 2);
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.7)';
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(-7, -4);
+        ctx.lineTo(7, -4);
+        ctx.lineTo(5, 8);
+        ctx.lineTo(-5, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(4, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 12, 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
-        lastMouse = { x: localX, y: localY };
-    };
+        // ====== UPDATE CARD DOM POSITION ======
+        const cardX = cardBody.position.x;
+        const cardY = cardBody.position.y;
+        const cardAngle = cardBody.angle;
 
-    const onUp = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        card.style.cursor = 'grab';
+        // Physics-based 3D tilt
+        const vx = cardBody.velocity.x;
+        const vy = cardBody.velocity.y;
 
-        // Apply Throw Velocity
-        // Verlet: x - oldX = velocity
-        // So: oldX = x - velocity
-        if (dragNode) {
-            const throwFactor = 1.5; // Boost the throw slightly
-            dragNode.oldX = dragNode.x - (dragVelocity.x * throwFactor);
-            dragNode.oldY = dragNode.y - (dragVelocity.y * throwFactor);
+        // Calculate target tilt from multiple factors
+        let targetTiltX = vy * PHYSICS_CONFIG.tiltFromVelocity;
+        let targetTiltY = -vx * PHYSICS_CONFIG.tiltFromVelocity;
+        
+        // Add swing contribution
+        targetTiltX += Math.sin(cardAngle) * PHYSICS_CONFIG.tiltFromSwing;
+        
+        // Add grab contribution when dragging
+        if (isDragging) {
+            targetTiltY += grabTilt.x * PHYSICS_CONFIG.tiltFromGrab;
+            targetTiltX -= grabTilt.y * PHYSICS_CONFIG.tiltFromGrab;
         }
 
-        dragNode = null;
+        // Smooth interpolation
+        smoothTiltX += (targetTiltX - smoothTiltX) * PHYSICS_CONFIG.tiltSmoothing;
+        smoothTiltY += (targetTiltY - smoothTiltY) * PHYSICS_CONFIG.tiltSmoothing;
+
+        // Clamp to max range
+        const finalTiltX = Math.max(-PHYSICS_CONFIG.maxTilt, Math.min(PHYSICS_CONFIG.maxTilt, smoothTiltX));
+        const finalTiltY = Math.max(-PHYSICS_CONFIG.maxTilt, Math.min(PHYSICS_CONFIG.maxTilt, smoothTiltY));
+
+        // Apply transform
+        cardElement.style.left = `${cardX}px`;
+        cardElement.style.top = `${cardY - cardHeight / 2}px`;
+        cardElement.style.transform = `translateX(-50%) rotate(${cardAngle}rad) rotateX(${finalTiltX}deg) rotateY(${finalTiltY}deg)`;
+
+        requestAnimationFrame(render);
     };
 
-    // Attach listeners to Card for starting drag
-    card.addEventListener('mousedown', onDown);
-    card.addEventListener('touchstart', onDown);
-
-    // Window for move/up to catch slip
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('touchmove', onMove);
-
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchend', onUp);
-
-    updatePhysics();
+    render();
+    console.log('[Physics] Enhanced Matter.js engine initialized with', numSegments, 'rope segments');
 }
 
 // --------------------------------------------------------------------------
