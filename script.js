@@ -384,25 +384,26 @@ const initIDCard = () => {
 
     const ctx = canvas.getContext('2d');
 
-    // Physics Config - Realistic physics simulation
+    // Physics Config - Rigid rope behavior (non-elastic)
     const config = {
-        segmentCount: 30, // Fewer segments for cleaner chain behavior
-        segmentLength: 18,
-        gravity: 0.6, // Realistic gravity (~9.8m/s² scaled for 60fps)
-        friction: 0.995, // Very low friction - realistic energy loss
-        airResistance: 0.998, // Minimal air drag for natural motion
-        iterations: 20, // High iterations for stable constraint solving
+        segmentCount: 25, // Shorter rope with fewer segments
+        targetSegmentLength: 8, // Target length after animation
+        segmentLength: 0.1, // Start very small for drop animation
+        gravity: 0.6, // Stronger gravity for realistic weight
+        friction: 0.96, // Reduced friction (was 0.985) for more swing/bounce
+        airResistance: 0.98, // Reduced air resistance (was 0.995)
+        iterations: 80, // Very high iterations for extremely rigid constraints (no stretch)
         strapWidth: 15,
         pivotX: 0,
         pivotY: 0,
-        // Wind simulation - disabled for pure physics
+        // Wind simulation - disabled for rigid behavior
         windEnabled: false,
         windStrength: 0.08,
         windFrequency: 0.001,
         // Bounce damping when hitting limits
-        bounceDamping: 0.7,
+        bounceDamping: 0.5, // Strong damping to prevent elastic bounce
         // Maximum swing angle (radians)
-        maxSwingAngle: Math.PI / 2.5
+        maxSwingAngle: Math.PI / 3
     };
 
     // State
@@ -418,12 +419,15 @@ const initIDCard = () => {
         canvas.width = container.offsetWidth;
         canvas.height = container.offsetHeight;
         config.pivotX = window.innerWidth * 0.75; // Right side (75%)
-        config.pivotY = 0; // Top of container
+        config.pivotY = 0; // Top of page
 
         // Local length: scale segment length to fit window height
-        // Target length: ~25% of window height (reduced from 35%)
-        const maxRopeLength = window.innerHeight * 0.15;
-        config.segmentLength = Math.min(15, maxRopeLength / config.segmentCount);
+        // Target length: ~25% of window height for slightly longer rope
+        const maxRopeLength = window.innerHeight * 0.50;
+        // Set the TARGET length, not the current length (which is animating)
+        config.targetSegmentLength = Math.max(6, Math.min(10, maxRopeLength / config.segmentCount));
+        // Force full length immediately for falling effect (slack behavior)
+        config.segmentLength = config.targetSegmentLength;
 
         // Reset or init nodes if empty
         if (nodes.length === 0) {
@@ -438,14 +442,19 @@ const initIDCard = () => {
     const initNodes = () => {
         nodes.length = 0;
         let startX = config.pivotX;
-        let startY = 0; // Start at pivot to prevent "jump" or high-flying start
+        let startY = config.pivotY; // Start at pivot point
 
+        // Initialize nodes "bunched up" at the pivot point to simulate a drop
+        // We give them a tiny vertical separation so they have a defined order,
+        // but they are mostly all at the top. Gravity will pull them down.
         for (let i = 0; i < config.segmentCount; i++) {
+            // Start effectively at 0 length, just trivial separation
+            const currentY = startY + i * 1;
             nodes.push({
                 x: startX,
-                y: startY + i * config.segmentLength,
+                y: currentY,
                 oldX: startX,
-                oldY: startY + i * config.segmentLength, // Zero initial velocity
+                oldY: currentY,
                 pinned: i === 0
             });
         }
@@ -461,6 +470,9 @@ const initIDCard = () => {
     const updatePhysics = () => {
         time += 1;
 
+        // Animate Rope Unfolding (Drop Effect) - REMOVED for natural fall with slack
+        // config.segmentLength is now constant (targetSegmentLength)
+
         // 1. Verlet Integration with enhanced forces
         for (let i = 0; i < nodes.length; i++) {
             const n = nodes[i];
@@ -470,21 +482,17 @@ const initIDCard = () => {
             let vx = (n.x - n.oldX) * config.friction;
             let vy = (n.y - n.oldY) * config.friction;
 
-            // Apply stronger horizontal damping to prevent wild sideways motion
-            vx *= 0.98; // Extra horizontal friction
-
             // Apply air resistance based on velocity magnitude
             const speed = Math.sqrt(vx * vx + vy * vy);
-            if (speed > 0.1) {
-                const airDrag = 1 - (speed * 0.002); // Stronger quadratic drag
+            if (speed > 0.05) {
+                const airDrag = 1 - (speed * 0.002); // Enhanced quadratic drag for stability
                 vx *= Math.max(0.85, airDrag);
-                vy *= Math.max(0.92, airDrag);
+                vy *= Math.max(0.85, airDrag);
+            } else if (speed > 0.01) {
+                // Strong damping for very small movements to reach rest state faster
+                vx *= 0.95;
+                vy *= 0.95;
             }
-
-            // Gentle centering force towards pivot X position (pendulum behavior)
-            const distFromPivot = n.x - config.pivotX;
-            const centeringForce = distFromPivot * 0.001 * (i / nodes.length); // Stronger for nodes further down
-            vx -= centeringForce;
 
             // Wind simulation - gentle ambient motion
             if (config.windEnabled && !isDragging) {
@@ -508,15 +516,6 @@ const initIDCard = () => {
             // Apply air resistance to overall motion
             n.x += (n.x - n.oldX) * (1 - config.airResistance);
             n.y += (n.y - n.oldY) * (1 - config.airResistance);
-
-            // Constrain maximum horizontal distance from pivot (prevent going too far)
-            const maxHorizontalOffset = 300; // Maximum pixels from pivot
-            if (Math.abs(n.x - config.pivotX) > maxHorizontalOffset) {
-                const sign = n.x > config.pivotX ? 1 : -1;
-                n.x = config.pivotX + sign * maxHorizontalOffset;
-                // Dampen horizontal velocity when hitting limit
-                n.oldX = n.x - (n.x - n.oldX) * 0.3;
-            }
         }
 
         // Drag processing
@@ -535,25 +534,32 @@ const initIDCard = () => {
                 const dx = n2.x - n1.x;
                 const dy = n2.y - n1.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const diff = config.segmentLength - dist;
-                const percent = diff / dist / 2;
-                const offsetX = dx * percent;
-                const offsetY = dy * percent;
 
-                if (!n1.pinned) {
-                    n1.x -= offsetX;
-                    n1.y -= offsetY;
-                }
-                if (!isDragging || i + 1 !== nodes.length - 1) { // Don't constrain dragged last node fully? Actually we want string to pull card.
-                    // If dragging card, card pulls string.
-                    // If not dragging, string pulls card.
-                    if (isDragging && i + 1 === nodes.length - 1) {
-                        // If n2 is dragged, n1 pulled to it. n2 fixed position this subframe.
-                        // So allow n2 update NO. n2 is set by mouse.
-                        // Just update n1.
-                    } else {
-                        n2.x += offsetX;
-                        n2.y += offsetY;
+                // Prevent division by zero / NaN
+                if (dist < 0.01) continue;
+
+                // Slack Constraint: Only pull if stretched beyond limit
+                if (dist > config.segmentLength) {
+                    const diff = config.segmentLength - dist;
+                    const percent = diff / dist / 2;
+                    const offsetX = dx * percent;
+                    const offsetY = dy * percent;
+
+                    if (!n1.pinned) {
+                        n1.x -= offsetX;
+                        n1.y -= offsetY;
+                    }
+                    if (!isDragging || i + 1 !== nodes.length - 1) { // Don't constrain dragged last node fully? Actually we want string to pull card.
+                        // If dragging card, card pulls string.
+                        // If not dragging, string pulls card.
+                        if (isDragging && i + 1 === nodes.length - 1) {
+                            // If n2 is dragged, n1 pulled to it. n2 fixed position this subframe.
+                            // So allow n2 update NO. n2 is set by mouse.
+                            // Just update n1.
+                        } else {
+                            n2.x += offsetX;
+                            n2.y += offsetY;
+                        }
                     }
                 }
             }
@@ -568,24 +574,43 @@ const initIDCard = () => {
             ctx.lineTo(nodes[i].x, nodes[i].y);
         }
 
-        // Base Strap (Tech Cable Style)
+        // Tech Rope Style - Cohérent avec le portfolio
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Outer Glow/Shadow
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        // 1. Outer Glow (Blue Accent)
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
 
-        // 1. Core (Dark)
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(nodes[0].x, nodes[0].y);
+        for (let i = 1; i < nodes.length; i++) {
+            ctx.lineTo(nodes[i].x, nodes[i].y);
+        }
+
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.lineWidth = 16;
         ctx.stroke();
 
-        ctx.shadowBlur = 0; // Reset shadow for details
+        // 2. Core (Dark with gradient)
+        ctx.shadowBlur = 0;
 
-        // 2. Texture Pattern (Braided look)
-        // We iterate segments to draw detail
+        // Create gradient along the rope
+        const gradient = ctx.createLinearGradient(nodes[0].x, nodes[0].y,
+            nodes[nodes.length - 1].x,
+            nodes[nodes.length - 1].y);
+        gradient.addColorStop(0, '#0f172a');
+        gradient.addColorStop(0.5, '#1e293b');
+        gradient.addColorStop(1, '#0f172a');
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 10;
+        ctx.stroke();
+
+        // 3. Tech Pattern (Energy Flow)
         ctx.save();
+        const flowOffset = (Date.now() * 0.001) % 1; // Animated flow
+
         for (let i = 0; i < nodes.length - 1; i++) {
             const n1 = nodes[i];
             const n2 = nodes[i + 1];
@@ -594,41 +619,51 @@ const initIDCard = () => {
             const dist = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx);
 
+            ctx.save();
             ctx.translate(n1.x, n1.y);
             ctx.rotate(angle);
 
-            // Draw small diagonal lines to simulate braiding
-            ctx.fillStyle = '#1e293b'; // Slightly lighter dark
-            const patternSpacing = 4;
-            for (let k = 0; k < dist; k += patternSpacing) {
-                ctx.fillRect(k, -4, 2, 8); // Small ticks
+            // Flowing energy particles
+            const particleSpacing = 20;
+            for (let k = flowOffset * particleSpacing; k < dist; k += particleSpacing) {
+                const alpha = Math.sin(k / particleSpacing + flowOffset * Math.PI * 2) * 0.3 + 0.3;
+                ctx.fillStyle = `rgba(59, 130, 246, ${alpha})`;
+                ctx.fillRect(k - 3, -2, 6, 4);
             }
 
-            ctx.rotate(-angle);
-            ctx.translate(-n1.x, -n1.y);
+            ctx.restore();
         }
         ctx.restore();
 
-        // 3. Highlight (Top edge reflection)
+        // 4. Highlight (Electric Edge)
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(139, 92, 246, 0.6)';
+
         ctx.beginPath();
-        ctx.moveTo(nodes[0].x - 2, nodes[0].y); // Offset slightly
+        ctx.moveTo(nodes[0].x, nodes[0].y);
         for (let i = 1; i < nodes.length; i++) {
-            ctx.lineTo(nodes[i].x - 2, nodes[i].y);
+            ctx.lineTo(nodes[i].x, nodes[i].y);
         }
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // 4. Branding Text (TTL)
+        ctx.shadowBlur = 0;
+
+        // 5. Branding "TTL." along the rope
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = 'bold 8px Arial';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
+        ctx.font = 'bold 10px "Space Grotesk", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
 
-        for (let i = 2; i < nodes.length - 2; i += 4) {
+        // Draw "TTL." text at intervals along the rope
+        const textInterval = 5; // Every 5 segments
+        for (let i = 3; i < nodes.length - 3; i += textInterval) {
             const n = nodes[i];
-            const next = nodes[i + 1];
+            const next = nodes[i + 1] || nodes[i];
             const textDx = next.x - n.x;
             const textDy = next.y - n.y;
             const textAngle = Math.atan2(textDy, textDx);
@@ -636,12 +671,12 @@ const initIDCard = () => {
             ctx.save();
             ctx.translate(n.x, n.y);
             ctx.rotate(textAngle);
-            ctx.fillText('TTL', 0, 0);
+            ctx.fillText('TTL.', 0, 0);
             ctx.restore();
         }
         ctx.restore();
 
-        // Draw Clip (Carabiner) at the end
+        // Draw Tech Connector at the end
         const tail = nodes[nodes.length - 1];
         ctx.save();
         ctx.translate(tail.x, tail.y);
@@ -651,22 +686,44 @@ const initIDCard = () => {
         const tailAngle = Math.atan2(lastSegDy, lastSegDx);
         ctx.rotate(tailAngle - Math.PI / 2);
 
-        // Draw Clip
+        // Connector with glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
+
+        // Main connector body
+        ctx.fillStyle = '#1e293b';
         ctx.beginPath();
-        ctx.fillStyle = '#94a3b8'; // Metal grey
-        ctx.moveTo(-6, 0);
-        ctx.lineTo(6, 0);
-        ctx.lineTo(4, 15);
-        ctx.lineTo(-4, 15);
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(6, 18);
+        ctx.lineTo(-6, 18);
         ctx.closePath();
         ctx.fill();
 
-        // Ring
-        ctx.strokeStyle = '#94a3b8';
+        // Accent line
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-5, 5);
+        ctx.lineTo(5, 5);
+        ctx.stroke();
+
+        // Attachment ring with glow
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.6)';
+        ctx.strokeStyle = '#3b82f6';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, 18, 6, 0, Math.PI * 2);
+        ctx.arc(0, 22, 7, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Inner ring detail
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 22, 4, 0, Math.PI * 2);
+        ctx.stroke();
+
         ctx.restore();
 
         // 5. Update Card Position (Attached to last node)
@@ -684,9 +741,23 @@ const initIDCard = () => {
         const avgDy = (cardDy + cardDy2) / 2;
         const cardAngle = Math.atan2(avgDy, avgDx) - Math.PI / 2; // -90deg because card is vertical
 
-        // Update DOM
-        card.style.left = `${lastNode.x}px`;
-        card.style.top = `${lastNode.y}px`;
+        // Calculate the exact position of the connector ring in global coordinates
+        // The ring is at local position (0, 22) in the rotated connector coordinate system
+        const connectorRingOffset = 22; // Local Y position of the ring in the connector
+        const cardAttachmentFromTop = 18; // Position of attachment point on card from top
+
+        // Transform local ring position to global coordinates using rotation
+        const ringLocalX = 0;
+        const ringLocalY = connectorRingOffset;
+        const ringAngle = tailAngle - Math.PI / 2; // Same rotation as connector
+
+        // Global position of the ring (accounting for rotation)
+        const ringGlobalX = lastNode.x + Math.cos(ringAngle) * ringLocalX - Math.sin(ringAngle) * ringLocalY;
+        const ringGlobalY = lastNode.y + Math.sin(ringAngle) * ringLocalX + Math.cos(ringAngle) * ringLocalY;
+
+        // Update DOM - position card so attachment point aligns with connector ring
+        card.style.left = `${ringGlobalX}px`;
+        card.style.top = `${ringGlobalY - cardAttachmentFromTop}px`;
 
         // Enhanced 3D Tilt calculation with smoothing
         // Velocity of tail (using 2-frame average for smoothness)
@@ -720,29 +791,22 @@ const initIDCard = () => {
     // Track previous angular velocity for wobble
     let prevAngularVel = 0;
 
-    // Scroll Reaction - Gentle and controlled
+    // Scroll Reaction - Reduced for better stability
     let lastScrollY = window.scrollY;
-    let scrollVelocity = 0;
-
     window.addEventListener('scroll', () => {
         const currentScrollY = window.scrollY;
         const delta = currentScrollY - lastScrollY;
         lastScrollY = currentScrollY;
 
-        // Smooth the scroll velocity
-        scrollVelocity = scrollVelocity * 0.8 + delta * 0.2;
-
-        // Apply gentle force to nodes based on scroll direction/speed
-        const force = scrollVelocity * 0.3; // Reduced force
+        // Apply subtle force to nodes based on scroll direction/speed
+        // Reduced multipliers for more natural and stable behavior
+        const force = delta * 0.3;
 
         for (let i = 1; i < nodes.length; i++) {
-            // Progressive force - nodes at the end swing more
-            const influence = (i / nodes.length);
-
-            // Add subtle sway (X) with progressive influence
-            nodes[i].x -= force * 0.15 * influence; // Much gentler
-            // Add vertical lag
-            nodes[i].y -= force * 0.08 * influence;
+            // Apply gentle sway and lag proportional to segment position
+            const influence = i / nodes.length; // Nodes further down move more
+            nodes[i].x -= force * 0.1 * influence; // Gentle sway
+            nodes[i].y -= force * 0.05 * influence; // Subtle vertical lag
         }
     });
 
@@ -792,13 +856,9 @@ const initIDCard = () => {
         const localX = cx - containerRect.left;
         const localY = cy - containerRect.top;
 
-        // Calculate Velocity with exponential smoothing for consistent throws
-        const instantVelX = localX - lastMouse.x;
-        const instantVelY = localY - lastMouse.y;
-
-        // Smooth velocity using exponential moving average
-        dragVelocity.x = dragVelocity.x * 0.6 + instantVelX * 0.4;
-        dragVelocity.y = dragVelocity.y * 0.6 + instantVelY * 0.4;
+        // Calculate Velocity (Current - Last)
+        dragVelocity.x = localX - lastMouse.x;
+        dragVelocity.y = localY - lastMouse.y;
 
         lastMouse = { x: localX, y: localY };
     };
@@ -808,16 +868,11 @@ const initIDCard = () => {
         isDragging = false;
         card.style.cursor = 'grab';
 
-        // Apply Throw Velocity with controlled physics
+        // Apply Throw Velocity
         // Verlet: x - oldX = velocity
         // So: oldX = x - velocity
         if (dragNode) {
-            // Moderate throw factor for natural motion
-            const speed = Math.sqrt(dragVelocity.x ** 2 + dragVelocity.y ** 2);
-            const baseThrow = 1.2; // Reduced base throw
-            const speedBonus = Math.min(speed * 0.02, 0.3); // Smaller bonus
-            const throwFactor = baseThrow + speedBonus;
-
+            const throwFactor = 1.5; // Boost the throw slightly
             dragNode.oldX = dragNode.x - (dragVelocity.x * throwFactor);
             dragNode.oldY = dragNode.y - (dragVelocity.y * throwFactor);
         }

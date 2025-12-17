@@ -142,8 +142,8 @@ body.hover-effect .cursor-follower {
 
 #id-card {
     position: absolute;
-    /* Initial generic position, controlled by JS */
-    top: -500px;
+    /* Initial position - will be controlled by JS physics */
+    top: 0;
     left: 50%;
     width: 260px;
     /* Slightly wider for better content fit */
@@ -232,7 +232,7 @@ body.hover-effect .cursor-follower {
     pointer-events: auto;
     /* restore interaction */
     cursor: grab;
-    transform-origin: top center;
+    transform-origin: 50% 18px;
     z-index: 2;
     /* 3D Transform settings */
     transform-style: preserve-3d;
@@ -259,6 +259,40 @@ body.hover-effect .cursor-follower {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+}
+
+/* Attachment point at top of card */
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background: radial-gradient(circle, #1e293b 0%, #0f172a 70%);
+    border: 2px solid #3b82f6;
+    border-radius: 50%;
+    box-shadow:
+        0 0 10px rgba(59, 130, 246, 0.5),
+        inset 0 0 5px rgba(59, 130, 246, 0.3);
+    z-index: 15;
+}
+
+/* Inner hole detail */
+.card-header::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 50%;
+    z-index: 16;
 }
 
 .card-role {
@@ -508,7 +542,10 @@ body.hover-effect .cursor-follower {
 .hero-content {
     z-index: 1;
     position: relative;
-    max-width: 800px;
+    max-width: 650px;
+    margin: 0;
+    margin-left: 15vw;
+    /* Left align with offset */
     pointer-events: auto;
     /* Restore interaction for text/buttons */
 }
