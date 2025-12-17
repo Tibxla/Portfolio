@@ -149,8 +149,32 @@ body.hover-effect .cursor-follower {
     /* Slightly wider for better content fit */
     height: 400px;
     transform-style: preserve-3d;
+    /* Remove visuals from container, it's just a pivot now */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: block;
+    /* Was flex, but flex should be on the face */
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               3D FACES                                     */
+/* -------------------------------------------------------------------------- */
+.card-face {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    /* Hide back of faces so they don't visually interfere */
+    border-radius: 24px;
+    /* More rounded as requested */
+}
+
+/* FRONT FACE */
+.card-face.front {
     background: rgba(8, 10, 15, 0.95);
-    /* More opaque for solidity */
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -158,45 +182,50 @@ body.hover-effect .cursor-follower {
         0 0 0 1px rgba(0, 0, 0, 0.2),
         0 20px 50px rgba(0, 0, 0, 0.6),
         inset 0 0 40px rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
     display: flex;
     flex-direction: column;
+    transform: translateZ(6px);
+    /* Front of stack */
+    z-index: 10;
+    /* Ensure content stays on top */
 }
 
-/* 3D Thickness Layers */
-#id-card::before,
-#id-card::after {
+/* BACK FACE */
+.card-face.back {
+    background: linear-gradient(135deg, var(--bg-secondary), #000);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transform: rotateY(180deg) translateZ(6px);
+    /* Back of stack */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.card-face.back::after {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    content: '';
+    width: 80px;
+    height: 80px;
+    background: url('favicon.svg') no-repeat center center;
+    /* Assuming favicon exists */
+    background-size: contain;
+    opacity: 0.1;
+}
+
+/* VOLUMETRIC LAYERS */
+.thickness-layer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    border-radius: 16px;
-    pointer-events: none;
-}
-
-#id-card::before {
-    /* The "Core" - This provides the thickness color */
     background: var(--accent-primary);
-    transform: translateZ(-4px);
-    /* Middle of sandwich */
-    box-shadow: 0 0 15px rgba(var(--accent-primary-rgb), 0.6);
-    /* Glow radiates from center */
+    border-radius: 24px;
+    pointer-events: none;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+    /* Definition for each slice */
 }
 
-#id-card::after {
-    /* The "Back Plate" - Dark again */
-    background: rgba(8, 10, 15, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transform: translateZ(-8px);
-    /* Back of sandwich */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-}
 
 #id-card {
     color: var(--text-primary);
@@ -208,6 +237,7 @@ body.hover-effect .cursor-follower {
     /* 3D Transform settings */
     transform-style: preserve-3d;
     will-change: transform;
+
 }
 
 #id-card:active {

@@ -679,6 +679,46 @@ const initIDCard = () => {
     updatePhysics();
 }
 
+// --------------------------------------------------------------------------
+// VOLUMETRIC CARD GENERATOR
+// --------------------------------------------------------------------------
+const initVolumetricCard = () => {
+    const card = document.getElementById('id-card');
+    if (!card) return;
+
+    // Configuration
+    const thickness = 12; // Total thickness in px
+    const layers = 12; // Number of slices (1 per px for density)
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim();
+
+    // Clean existing layers if re-running
+    const existingLayers = card.querySelectorAll('.thickness-layer');
+    existingLayers.forEach(l => l.remove());
+
+    // Create layers
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < layers; i++) {
+        const layer = document.createElement('div');
+        layer.classList.add('thickness-layer');
+
+        // Calculate Z position: from -thickness/2 to +thickness/2
+        // We want them effectively between the front face (+6px) and back face (-6px)
+        const z = (thickness / 2) - (i * (thickness / (layers - 1)));
+
+        layer.style.transform = `translateZ(${z}px)`;
+        layer.style.opacity = (i === 0 || i === layers - 1) ? '0' : '1'; // Hide first/last if they clip faces, though usually fine
+
+        // Slight darkening for inner layers to simulate solid material?
+        // simple: keep same color
+
+        fragment.appendChild(layer);
+    }
+
+    // Insert layers before the content faces to keep DOM tidy (though z-index handles viz)
+    card.insertBefore(fragment, card.firstChild);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // START BACKGROUND ANIMATION
@@ -686,6 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // START ID CARD
     initIDCard();
+    initVolumetricCard();
 
     // ----------------------------------------------------------------------
     // CUSTOM CURSOR
