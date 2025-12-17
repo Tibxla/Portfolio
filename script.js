@@ -384,16 +384,25 @@ const initIDCard = () => {
 
     const ctx = canvas.getContext('2d');
 
-    // Physics Config
+    // Physics Config - Realistic physics simulation
     const config = {
-        segmentCount: 40, // Reduced for shorter, more stable rope
-        segmentLength: 15,
-        gravity: 0.4, // Floatier
-        friction: 0.98, // More swing
-        iterations: 10, // Solver stability
+        segmentCount: 30, // Fewer segments for cleaner chain behavior
+        segmentLength: 18,
+        gravity: 0.6, // Realistic gravity (~9.8m/s² scaled for 60fps)
+        friction: 0.995, // Very low friction - realistic energy loss
+        airResistance: 0.998, // Minimal air drag for natural motion
+        iterations: 20, // High iterations for stable constraint solving
         strapWidth: 15,
         pivotX: 0,
-        pivotY: 0
+        pivotY: 0,
+        // Wind simulation - disabled for pure physics
+        windEnabled: false,
+        windStrength: 0.08,
+        windFrequency: 0.001,
+        // Bounce damping when hitting limits
+        bounceDamping: 0.7,
+        // Maximum swing angle (radians)
+        maxSwingAngle: Math.PI / 2.5
     };
 
     // State
@@ -445,16 +454,49 @@ const initIDCard = () => {
     resize();
     window.addEventListener('resize', resize);
 
+    // Time tracking for wind simulation
+    let time = 0;
+
     // Physics Loop
     const updatePhysics = () => {
-        // 1. Verlet Integration
+        time += 1;
+
+        // 1. Verlet Integration with enhanced forces
         for (let i = 0; i < nodes.length; i++) {
             const n = nodes[i];
             if (n.pinned) continue; // Skip pivot
             if (isDragging && i === nodes.length - 1) continue; // Skip dragged node handling here
 
-            const vx = (n.x - n.oldX) * config.friction;
-            const vy = (n.y - n.oldY) * config.friction;
+            let vx = (n.x - n.oldX) * config.friction;
+            let vy = (n.y - n.oldY) * config.friction;
+
+            // Apply stronger horizontal damping to prevent wild sideways motion
+            vx *= 0.98; // Extra horizontal friction
+
+            // Apply air resistance based on velocity magnitude
+            const speed = Math.sqrt(vx * vx + vy * vy);
+            if (speed > 0.1) {
+                const airDrag = 1 - (speed * 0.002); // Stronger quadratic drag
+                vx *= Math.max(0.85, airDrag);
+                vy *= Math.max(0.92, airDrag);
+            }
+
+            // Gentle centering force towards pivot X position (pendulum behavior)
+            const distFromPivot = n.x - config.pivotX;
+            const centeringForce = distFromPivot * 0.001 * (i / nodes.length); // Stronger for nodes further down
+            vx -= centeringForce;
+
+            // Wind simulation - gentle ambient motion
+            if (config.windEnabled && !isDragging) {
+                const windPhase = time * config.windFrequency + i * 0.1;
+                const windX = Math.sin(windPhase) * Math.cos(windPhase * 0.7) * config.windStrength;
+                const windY = Math.sin(windPhase * 0.5) * 0.05 * config.windStrength;
+
+                // Nodes further down the rope are affected more by wind
+                const windInfluence = (i / nodes.length) * 0.8 + 0.2;
+                vx += windX * windInfluence;
+                vy += windY * windInfluence;
+            }
 
             n.oldX = n.x;
             n.oldY = n.y;
@@ -462,6 +504,19 @@ const initIDCard = () => {
             n.x += vx;
             n.y += vy;
             n.y += config.gravity;
+
+            // Apply air resistance to overall motion
+            n.x += (n.x - n.oldX) * (1 - config.airResistance);
+            n.y += (n.y - n.oldY) * (1 - config.airResistance);
+
+            // Constrain maximum horizontal distance from pivot (prevent going too far)
+            const maxHorizontalOffset = 300; // Maximum pixels from pivot
+            if (Math.abs(n.x - config.pivotX) > maxHorizontalOffset) {
+                const sign = n.x > config.pivotX ? 1 : -1;
+                n.x = config.pivotX + sign * maxHorizontalOffset;
+                // Dampen horizontal velocity when hitting limit
+                n.oldX = n.x - (n.x - n.oldX) * 0.3;
+            }
         }
 
         // Drag processing
@@ -617,48 +672,77 @@ const initIDCard = () => {
         // 5. Update Card Position (Attached to last node)
         const lastNode = nodes[nodes.length - 1];
         const prevTail = nodes[nodes.length - 2];
+        const prevPrevTail = nodes[nodes.length - 3] || prevTail;
 
-        // Calculate rotation based on last segment angle
+        // Calculate rotation based on average of last segments for smoother angle
         const cardDx = lastNode.x - prevTail.x;
         const cardDy = lastNode.y - prevTail.y;
-        const cardAngle = Math.atan2(cardDy, cardDx) - Math.PI / 2; // -90deg because card is vertical
+        const cardDx2 = prevTail.x - prevPrevTail.x;
+        const cardDy2 = prevTail.y - prevPrevTail.y;
+
+        const avgDx = (cardDx + cardDx2) / 2;
+        const avgDy = (cardDy + cardDy2) / 2;
+        const cardAngle = Math.atan2(avgDy, avgDx) - Math.PI / 2; // -90deg because card is vertical
 
         // Update DOM
         card.style.left = `${lastNode.x}px`;
         card.style.top = `${lastNode.y}px`;
 
-        // 3D Tilt calculation
-        // Velocity of tail
+        // Enhanced 3D Tilt calculation with smoothing
+        // Velocity of tail (using 2-frame average for smoothness)
         const vx = (lastNode.x - lastNode.oldX);
         const vy = (lastNode.y - lastNode.oldY);
 
-        const tiltX = vy * 2;
-        const tiltY = -vx * 2;
+        // Calculate acceleration for more dynamic feel
+        const ax = vx - (prevTail.x - prevTail.oldX);
+        const ay = vy - (prevTail.y - prevTail.oldY);
 
-        card.style.transform = `translateX(-50%) rotate(${cardAngle}rad) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        // Combine velocity and acceleration for tilt
+        // Clamp values to prevent extreme tilting
+        const maxTilt = 25;
+        let tiltX = (vy * 1.5 + ay * 0.5);
+        let tiltY = (-vx * 1.5 - ax * 0.5);
+
+        tiltX = Math.max(-maxTilt, Math.min(maxTilt, tiltX));
+        tiltY = Math.max(-maxTilt, Math.min(maxTilt, tiltY));
+
+        // Add subtle wobble based on angular velocity
+        const angularVel = cardAngle - (prevAngularVel || cardAngle);
+        prevAngularVel = cardAngle;
+
+        const wobble = Math.sin(time * 0.1) * Math.abs(angularVel) * 2;
+
+        card.style.transform = `translateX(-50%) rotate(${cardAngle}rad) rotateX(${tiltX + wobble}deg) rotateY(${tiltY}deg)`;
 
         requestAnimationFrame(updatePhysics);
     };
 
-    // Scroll Reaction
+    // Track previous angular velocity for wobble
+    let prevAngularVel = 0;
+
+    // Scroll Reaction - Gentle and controlled
     let lastScrollY = window.scrollY;
+    let scrollVelocity = 0;
+
     window.addEventListener('scroll', () => {
         const currentScrollY = window.scrollY;
         const delta = currentScrollY - lastScrollY;
         lastScrollY = currentScrollY;
 
-        // Apply force to nodes based on scroll direction/speed
-        // If scrolling down (positive delta), world moves up relative to view.
-        // Inertia means items should "lag" behind, so they move UP (negative Y)? 
-        // Or if we simulate wind/movement:
+        // Smooth the scroll velocity
+        scrollVelocity = scrollVelocity * 0.8 + delta * 0.2;
 
-        const force = delta * 0.5;
+        // Apply gentle force to nodes based on scroll direction/speed
+        const force = scrollVelocity * 0.3; // Reduced force
 
         for (let i = 1; i < nodes.length; i++) {
-            // Apply vertical force? Or swing?
-            // Let's add a bit of sway (X) and lag (Y)
-            nodes[i].x -= force * 0.2; // Slight sway
-            nodes[i].y -= force * 0.1; // Slight vertical lag
+            // Progressive force - nodes at the end swing more
+            const influence = (i / nodes.length);
+
+            // Add subtle sway (X) with progressive influence
+            nodes[i].x -= force * 0.15 * influence; // Much gentler
+            // Add vertical lag
+            nodes[i].y -= force * 0.08 * influence;
         }
     });
 
@@ -708,9 +792,13 @@ const initIDCard = () => {
         const localX = cx - containerRect.left;
         const localY = cy - containerRect.top;
 
-        // Calculate Velocity (Current - Last)
-        dragVelocity.x = localX - lastMouse.x;
-        dragVelocity.y = localY - lastMouse.y;
+        // Calculate Velocity with exponential smoothing for consistent throws
+        const instantVelX = localX - lastMouse.x;
+        const instantVelY = localY - lastMouse.y;
+
+        // Smooth velocity using exponential moving average
+        dragVelocity.x = dragVelocity.x * 0.6 + instantVelX * 0.4;
+        dragVelocity.y = dragVelocity.y * 0.6 + instantVelY * 0.4;
 
         lastMouse = { x: localX, y: localY };
     };
@@ -720,11 +808,16 @@ const initIDCard = () => {
         isDragging = false;
         card.style.cursor = 'grab';
 
-        // Apply Throw Velocity
+        // Apply Throw Velocity with controlled physics
         // Verlet: x - oldX = velocity
         // So: oldX = x - velocity
         if (dragNode) {
-            const throwFactor = 1.5; // Boost the throw slightly
+            // Moderate throw factor for natural motion
+            const speed = Math.sqrt(dragVelocity.x ** 2 + dragVelocity.y ** 2);
+            const baseThrow = 1.2; // Reduced base throw
+            const speedBonus = Math.min(speed * 0.02, 0.3); // Smaller bonus
+            const throwFactor = baseThrow + speedBonus;
+
             dragNode.oldX = dragNode.x - (dragVelocity.x * throwFactor);
             dragNode.oldY = dragNode.y - (dragVelocity.y * throwFactor);
         }
