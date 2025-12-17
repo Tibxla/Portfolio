@@ -1,22 +1,66 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thibaud Thomas-Lamotte | Etudiant L3 MIAGE - Futur Expert FinTech</title>
-    <meta name="description" content="Portfolio de Thibaud Thomas-Lamotte, étudiant L3 MIAGE spécialisé en développement logiciel et finance.">
+    <meta name="description"
+        content="Portfolio de Thibaud Thomas-Lamotte, étudiant L3 MIAGE spécialisé en développement logiciel et finance.">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="styles.css">
     <!-- Polices Google : Space Grotesk pour les titres, Inter pour le texte -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
     <!-- FontAwesome pour les icônes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
     <!-- Interactive Background Canvas -->
     <canvas id="bg-canvas"></canvas>
+
+    <!-- Interactive ID Card Container -->
+    <div id="id-card-container">
+        <canvas id="lanyard"></canvas>
+        <div id="id-card" class="glass-card">
+            <!-- 3D Sides -->
+            <div class="card-face front">
+                <div class="card-header">
+                    <span class="card-role">DEVELOPER ACCESS</span>
+                    <div class="card-logo">TTL<span class="dot">.</span></div>
+                </div>
+                <div class="card-body">
+                    <div class="card-photo">
+                        <i class="fas fa-terminal"></i>
+                    </div>
+                    <div class="card-info">
+                        <div class="status-pill"><span class="status-dot"></span>Available 2026</div>
+                        <div class="tech-stack-grid">
+                            <i class="fab fa-js"></i>
+                            <i class="fab fa-react"></i>
+                            <i class="fab fa-node"></i>
+                            <i class="fab fa-python"></i>
+                            <i class="fas fa-database"></i>
+                            <i class="fab fa-git-alt"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="barcode"></div>
+                    <span class="id-number">LEVEL: JUNIOR</span>
+                </div>
+            </div>
+            <div class="card-face back"></div>
+            <div class="card-face left"></div>
+            <div class="card-face right"></div>
+            <div class="card-face top"></div>
+            <div class="card-face bottom"></div>
+        </div>
+    </div>
 
     <!-- Curseur personnalisé -->
     <div class="cursor"></div>
@@ -41,17 +85,19 @@
     <section id="hero" class="hero-section">
         <div class="container hero-content">
             <span class="tagline">Étudiant L3 MIAGE</span>
-            <h1 class="glitch-effect" data-text="Thibaud Thomas-Lamotte">Thibaud <br> <span class="text-gradient">Thomas-Lamotte</span></h1>
+            <h1 class="glitch-effect" data-text="Thibaud Thomas-Lamotte">Thibaud <br> <span
+                    class="text-gradient">Thomas-Lamotte</span></h1>
             <p class="hero-desc">
                 Architecture & Finance. <br>
-                Je conçois des solutions logicielles performantes. 
+                Je conçois des solutions logicielles performantes.
                 À la recherche d'un stage de 10 semaines dès mars 2026.
             </p>
             <div class="hero-cta">
                 <a href="#projets" class="btn btn-primary">Voir mes travaux <i class="fas fa-arrow-right"></i></a>
-                <a href="https://www.linkedin.com/in/thibaudthomaslamotte/" target="_blank" class="btn btn-secondary"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
+                <a href="https://www.linkedin.com/in/thibaudthomaslamotte/" target="_blank" class="btn btn-secondary"><i
+                        class="fab fa-linkedin-in"></i> LinkedIn</a>
             </div>
-            
+
 
         </div>
     </section>
@@ -60,7 +106,7 @@
     <section id="projets" class="section projets-section">
         <div class="container">
             <h2 class="section-title">Projets Sélectionnés <span class="line"></span></h2>
-            
+
             <div class="projects-grid">
                 <!-- Projet 1 : Finance (Mise en avant) -->
                 <article class="project-card featured" data-tilt>
@@ -69,12 +115,14 @@
                             <span class="project-category">Finance & Web</span>
                             <h3>FolioVision</h3>
                         </div>
-                        <p>Plateforme de gestion de portefeuille financier temps réel. Tableau de bord dynamique pour le suivi d'actifs et visualisation de données boursières.</p>
+                        <p>Plateforme de gestion de portefeuille financier temps réel. Tableau de bord dynamique pour le
+                            suivi d'actifs et visualisation de données boursières.</p>
                         <div class="tech-stack">
                             <span>PHP</span><span>MySQL</span><span>JS</span><span>Chart.js</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://github.com/Tibxla/FolioVision" target="_blank" class="link-arrow">Voir sur GitHub <i class="fas fa-external-link-alt"></i></a>
+                            <a href="https://github.com/Tibxla/FolioVision" target="_blank" class="link-arrow">Voir sur
+                                GitHub <i class="fas fa-external-link-alt"></i></a>
                         </div>
                     </div>
                     <div class="project-visual">
@@ -91,11 +139,13 @@
                             <span class="project-category">Enterprise App</span>
                             <h3>PGI Automobile</h3>
                         </div>
-                        <p>ERP complet pour concessionnaire : gestion RH, ventes, stocks et reporting statistique. Une solution intégrée pour l'entreprise.</p>
+                        <p>ERP complet pour concessionnaire : gestion RH, ventes, stocks et reporting statistique. Une
+                            solution intégrée pour l'entreprise.</p>
                         <div class="tech-stack">
                             <span>PHP</span><span>SQL</span><span>MVC</span>
                         </div>
-                        <a href="https://github.com/Tibxla/PGI-Automobile" target="_blank" class="icon-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://github.com/Tibxla/PGI-Automobile" target="_blank" class="icon-link"
+                            aria-label="GitHub"><i class="fab fa-github"></i></a>
                     </div>
                 </article>
 
@@ -106,11 +156,13 @@
                             <span class="project-category">Cybersécurité</span>
                             <h3>SteganoPY</h3>
                         </div>
-                        <p>Outil de stéganographie web utilisant la méthode LSB pour dissimuler des données sensibles dans des images. Interface Flask sécurisée.</p>
+                        <p>Outil de stéganographie web utilisant la méthode LSB pour dissimuler des données sensibles
+                            dans des images. Interface Flask sécurisée.</p>
                         <div class="tech-stack">
                             <span>Python</span><span>Flask</span><span>Crypto</span>
                         </div>
-                        <a href="https://github.com/Tibxla/SteganoPY" target="_blank" class="icon-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://github.com/Tibxla/SteganoPY" target="_blank" class="icon-link"
+                            aria-label="GitHub"><i class="fab fa-github"></i></a>
                     </div>
                 </article>
 
@@ -121,11 +173,13 @@
                             <span class="project-category">Productivité</span>
                             <h3>FileRenamer</h3>
                         </div>
-                        <p>Application Desktop C++/Qt pour le traitement de fichiers en masse. Architecture robuste et interface utilisateur personnalisable.</p>
+                        <p>Application Desktop C++/Qt pour le traitement de fichiers en masse. Architecture robuste et
+                            interface utilisateur personnalisable.</p>
                         <div class="tech-stack">
                             <span>C++</span><span>Qt</span><span>Desktop</span>
                         </div>
-                        <a href="https://github.com/Tibxla/FileRenamer" target="_blank" class="icon-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://github.com/Tibxla/FileRenamer" target="_blank" class="icon-link"
+                            aria-label="GitHub"><i class="fab fa-github"></i></a>
                     </div>
                 </article>
 
@@ -136,11 +190,13 @@
                             <span class="project-category">IA & Jeux</span>
                             <h3>Maze Game AI</h3>
                         </div>
-                        <p>Jeu de labyrinthe procédural avec intelligence artificielle (Pathfinding) pour les ennemis.</p>
+                        <p>Jeu de labyrinthe procédural avec intelligence artificielle (Pathfinding) pour les ennemis.
+                        </p>
                         <div class="tech-stack">
                             <span>Python</span><span>Pygame</span><span>IA</span>
                         </div>
-                        <a href="https://github.com/Tibxla/Maze-game" target="_blank" class="icon-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://github.com/Tibxla/Maze-game" target="_blank" class="icon-link"
+                            aria-label="GitHub"><i class="fab fa-github"></i></a>
                     </div>
                 </article>
 
@@ -151,17 +207,20 @@
                             <span class="project-category">Développement Fullstack</span>
                             <h3>Projet Web L3</h3>
                         </div>
-                        <p>Application web complexe réalisée en équipe. Gestion d'utilisateurs, base de données optimisée et interface responsive.</p>
+                        <p>Application web complexe réalisée en équipe. Gestion d'utilisateurs, base de données
+                            optimisée et interface responsive.</p>
                         <div class="tech-stack">
                             <span>HTML5</span><span>CSS3</span><span>PHP</span><span>MySQL</span>
                         </div>
-                        <a href="https://github.com/selmabayb/projetwebl3" target="_blank" class="icon-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://github.com/selmabayb/projetwebl3" target="_blank" class="icon-link"
+                            aria-label="GitHub"><i class="fab fa-github"></i></a>
                     </div>
                 </article>
             </div>
-            
+
             <div class="center-btn">
-                <a href="https://github.com/Tibxla?tab=repositories" target="_blank" class="btn btn-outline">Voir tout le GitHub <i class="fab fa-github"></i></a>
+                <a href="https://github.com/Tibxla?tab=repositories" target="_blank" class="btn btn-outline">Voir tout
+                    le GitHub <i class="fab fa-github"></i></a>
             </div>
         </div>
     </section>
@@ -170,7 +229,7 @@
     <section id="experiences" class="section experiences-section">
         <div class="container">
             <h2 class="section-title">Parcours & Formation <span class="line"></span></h2>
-            
+
             <div class="timeline">
                 <!-- Item 1 -->
                 <div class="timeline-item left">
@@ -178,7 +237,8 @@
                         <span class="date">2023 - Présent</span>
                         <h3>Licence 3 MIAGE</h3>
                         <h4>Université Paris Nanterre</h4>
-                        <p>Double compétence Informatique & Gestion. Spécialisation en architecture logicielle, bases de données et analyse financière.</p>
+                        <p>Double compétence Informatique & Gestion. Spécialisation en architecture logicielle, bases de
+                            données et analyse financière.</p>
                     </div>
                 </div>
                 <!-- Item 2 -->
@@ -187,7 +247,8 @@
                         <span class="date">Été 2024</span>
                         <h3>Job Étudiant - Commerce</h3>
                         <h4>Boulangerie Ange</h4>
-                        <p>Gestion de la relation client, encaissement et organisation. Développement de la rigueur et de la gestion du stress.</p>
+                        <p>Gestion de la relation client, encaissement et organisation. Développement de la rigueur et
+                            de la gestion du stress.</p>
                     </div>
                 </div>
                 <!-- Item 3 -->
@@ -196,7 +257,8 @@
                         <span class="date">2023 - 2024</span>
                         <h3>Vente & Événementiel</h3>
                         <h4>Grands événements (Rock en Seine...)</h4>
-                        <p>Logistique et vente sur stand. Capacité d'adaptation rapide et travail en équipe sous pression.</p>
+                        <p>Logistique et vente sur stand. Capacité d'adaptation rapide et travail en équipe sous
+                            pression.</p>
                     </div>
                 </div>
                 <!-- Item 4 -->
@@ -216,7 +278,7 @@
     <section id="competences" class="section skills-section">
         <div class="container">
             <h2 class="section-title">Arsenal Technique <span class="line"></span></h2>
-            
+
             <div class="skills-wrapper">
                 <div class="skill-category">
                     <h3><i class="fas fa-code"></i> Développement</h3>
@@ -258,14 +320,18 @@
         <div class="container contact-container">
             <div class="contact-text">
                 <h2>Prêt à collaborer ?</h2>
-                <p>À la recherche d'un stage stimulant de 10 semaines à partir de mars 2026. Discutons de la manière dont je peux apporter de la valeur à votre équipe.</p>
+                <p>À la recherche d'un stage stimulant de 10 semaines à partir de mars 2026. Discutons de la manière
+                    dont je peux apporter de la valeur à votre équipe.</p>
                 <div class="contact-info">
-                    <a href="mailto:thibaud.thomaslamotte@gmail.com" class="contact-link"><i class="fas fa-envelope"></i> thibaud.thomaslamotte@gmail.com</a>
+                    <a href="mailto:thibaud.thomaslamotte@gmail.com" class="contact-link"><i
+                            class="fas fa-envelope"></i> thibaud.thomaslamotte@gmail.com</a>
                     <a href="tel:+33651072727" class="contact-link"><i class="fas fa-phone"></i> +33 6 51 07 27 27</a>
                 </div>
                 <div class="social-buttons">
-                    <a href="https://www.linkedin.com/in/thibaudthomaslamotte/" target="_blank" class="btn btn-primary"><i class="fab fa-linkedin-in"></i> Connectons-nous sur LinkedIn</a>
-                    <a href="https://github.com/Tibxla" target="_blank" class="btn btn-secondary"><i class="fab fa-github"></i> Mon Portfolio GitHub</a>
+                    <a href="https://www.linkedin.com/in/thibaudthomaslamotte/" target="_blank"
+                        class="btn btn-primary"><i class="fab fa-linkedin-in"></i> Connectons-nous sur LinkedIn</a>
+                    <a href="https://github.com/Tibxla" target="_blank" class="btn btn-secondary"><i
+                            class="fab fa-github"></i> Mon Portfolio GitHub</a>
                 </div>
             </div>
         </div>
@@ -280,4 +346,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
