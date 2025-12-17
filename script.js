@@ -386,7 +386,7 @@ const initIDCard = () => {
 
     // Physics Config
     const config = {
-        segmentCount: 60, // Slightly longer
+        segmentCount: 40, // Reduced for shorter, more stable rope
         segmentLength: 15,
         gravity: 0.4, // Floatier
         friction: 0.98, // More swing
@@ -411,6 +411,11 @@ const initIDCard = () => {
         config.pivotX = window.innerWidth * 0.75; // Right side (75%)
         config.pivotY = 0; // Top of container
 
+        // Local length: scale segment length to fit window height
+        // Target length: ~25% of window height (reduced from 35%)
+        const maxRopeLength = window.innerHeight * 0.15;
+        config.segmentLength = Math.min(15, maxRopeLength / config.segmentCount);
+
         // Reset or init nodes if empty
         if (nodes.length === 0) {
             initNodes();
@@ -424,14 +429,14 @@ const initIDCard = () => {
     const initNodes = () => {
         nodes.length = 0;
         let startX = config.pivotX;
-        let startY = -800; // Start higher up to drop
+        let startY = 0; // Start at pivot to prevent "jump" or high-flying start
 
         for (let i = 0; i < config.segmentCount; i++) {
             nodes.push({
                 x: startX,
-                y: startY + i * config.segmentLength, // Prevent explosion by matching constraint length
+                y: startY + i * config.segmentLength,
                 oldX: startX,
-                oldY: startY + i * config.segmentLength - 8, // Initial velocity downwards (8px/frame approx)
+                oldY: startY + i * config.segmentLength, // Zero initial velocity
                 pinned: i === 0
             });
         }
@@ -508,36 +513,75 @@ const initIDCard = () => {
             ctx.lineTo(nodes[i].x, nodes[i].y);
         }
 
-        // Base Strap (Black)
-        ctx.lineCap = 'butt'; // Flat ends for strap look
+        // Base Strap (Tech Cable Style)
+        ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#0f172a'; // Ink Black/Dark Blue
-        ctx.lineWidth = 20;
+
+        // Outer Glow/Shadow
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+
+        // 1. Core (Dark)
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 12;
         ctx.stroke();
 
-        // Texture / Branding
+        ctx.shadowBlur = 0; // Reset shadow for details
+
+        // 2. Texture Pattern (Braided look)
+        // We iterate segments to draw detail
         ctx.save();
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        for (let i = 0; i < nodes.length - 1; i++) {
+            const n1 = nodes[i];
+            const n2 = nodes[i + 1];
+            const dx = n2.x - n1.x;
+            const dy = n2.y - n1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            ctx.translate(n1.x, n1.y);
+            ctx.rotate(angle);
+
+            // Draw small diagonal lines to simulate braiding
+            ctx.fillStyle = '#1e293b'; // Slightly lighter dark
+            const patternSpacing = 4;
+            for (let k = 0; k < dist; k += patternSpacing) {
+                ctx.fillRect(k, -4, 2, 8); // Small ticks
+            }
+
+            ctx.rotate(-angle);
+            ctx.translate(-n1.x, -n1.y);
+        }
+        ctx.restore();
+
+        // 3. Highlight (Top edge reflection)
+        ctx.beginPath();
+        ctx.moveTo(nodes[0].x - 2, nodes[0].y); // Offset slightly
+        for (let i = 1; i < nodes.length; i++) {
+            ctx.lineTo(nodes[i].x - 2, nodes[i].y);
+        }
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 4. Branding Text (TTL)
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.font = 'bold 8px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Draw logos every few segments
-        for (let i = 1; i < nodes.length - 1; i += 3) {
+        for (let i = 2; i < nodes.length - 2; i += 4) {
             const n = nodes[i];
             const next = nodes[i + 1];
-            // Calculate angle for text rotation
-            const dx = next.x - n.x;
-            const dy = next.y - n.y;
-            const angle = Math.atan2(dy, dx);
+            const textDx = next.x - n.x;
+            const textDy = next.y - n.y;
+            const textAngle = Math.atan2(textDy, textDx);
 
             ctx.save();
             ctx.translate(n.x, n.y);
-            ctx.rotate(angle);
-            // Draw Logo/Text
+            ctx.rotate(textAngle);
             ctx.fillText('TTL', 0, 0);
-            // Optional icon style instead:
-            // ctx.beginPath(); ctx.arc(0,0,3,0,Math.PI*2); ctx.fill();
             ctx.restore();
         }
         ctx.restore();
@@ -550,7 +594,7 @@ const initIDCard = () => {
         const lastSegDx = tail.x - nodes[nodes.length - 2].x;
         const lastSegDy = tail.y - nodes[nodes.length - 2].y;
         const tailAngle = Math.atan2(lastSegDy, lastSegDx);
-        ctx.rotate(tailAngle - Math.PI / 2); // Perpendicular? No, align with rope.
+        ctx.rotate(tailAngle - Math.PI / 2);
 
         // Draw Clip
         ctx.beginPath();
@@ -570,20 +614,17 @@ const initIDCard = () => {
         ctx.stroke();
         ctx.restore();
 
-        // 4. Update Card Position (Attached to last node)
+        // 5. Update Card Position (Attached to last node)
         const lastNode = nodes[nodes.length - 1];
         const prevTail = nodes[nodes.length - 2];
 
         // Calculate rotation based on last segment angle
-        const dx = lastNode.x - prevTail.x;
-        const dy = lastNode.y - prevTail.y;
-        const angle = Math.atan2(dy, dx) - Math.PI / 2; // -90deg because card is vertical
+        const cardDx = lastNode.x - prevTail.x;
+        const cardDy = lastNode.y - prevTail.y;
+        const cardAngle = Math.atan2(cardDy, cardDx) - Math.PI / 2; // -90deg because card is vertical
 
         // Update DOM
-        // Card is centered on the tail node horizontally
-        // but tail node is the "clip" position (top center of card)
-
-        card.style.left = `${lastNode.x}px`; // We set left/top via JS now, need to override CSS centering
+        card.style.left = `${lastNode.x}px`;
         card.style.top = `${lastNode.y}px`;
 
         // 3D Tilt calculation
@@ -594,12 +635,32 @@ const initIDCard = () => {
         const tiltX = vy * 2;
         const tiltY = -vx * 2;
 
-        // transform: translateX(-50%) is needed because attached at top-center
-        // rotate(angle) is the pendulum swing
-        card.style.transform = `translateX(-50%) rotate(${angle}rad) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        card.style.transform = `translateX(-50%) rotate(${cardAngle}rad) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
 
         requestAnimationFrame(updatePhysics);
     };
+
+    // Scroll Reaction
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        const delta = currentScrollY - lastScrollY;
+        lastScrollY = currentScrollY;
+
+        // Apply force to nodes based on scroll direction/speed
+        // If scrolling down (positive delta), world moves up relative to view.
+        // Inertia means items should "lag" behind, so they move UP (negative Y)? 
+        // Or if we simulate wind/movement:
+
+        const force = delta * 0.5;
+
+        for (let i = 1; i < nodes.length; i++) {
+            // Apply vertical force? Or swing?
+            // Let's add a bit of sway (X) and lag (Y)
+            nodes[i].x -= force * 0.2; // Slight sway
+            nodes[i].y -= force * 0.1; // Slight vertical lag
+        }
+    });
 
     // Interaction
     const onDown = (e) => {
@@ -609,15 +670,21 @@ const initIDCard = () => {
         const cx = e.clientX || e.touches[0].clientX;
         const cy = e.clientY || e.touches[0].clientY;
 
-        // Correct mouse pos for scroll since container is absolute
-        const pageX = e.pageX || (cx + window.scrollX);
-        const pageY = e.pageY || (cy + window.scrollY);
+        // Calculate Mouse Position in Container relative to rect (same as onMove)
+        const containerRect = container.getBoundingClientRect();
+        const localX = cx - containerRect.left;
+        const localY = cy - containerRect.top;
 
-        lastMouse = { x: pageX, y: pageY };
+        lastMouse = { x: localX, y: localY };
 
         // Drag node is the last one
         dragNode = nodes[nodes.length - 1];
-        dragOffset = { x: 0, y: 0 };
+
+        // Calculate offset so the card doesn't snap to center
+        dragOffset = {
+            x: localX - dragNode.x,
+            y: localY - dragNode.y
+        };
 
         // Reset velocity variables
         dragVelocity = { x: 0, y: 0 };
