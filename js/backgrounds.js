@@ -41,7 +41,7 @@ export const initBackground = () => {
                 this.dx = (Math.random() * 0.4) - 0.2;
                 this.dy = (Math.random() * 0.4) - 0.2;
                 this.size = Math.random() * 2 + 1;
-                this.color = `rgba(59, 130, 246, ${Math.random() * 0.15})`;
+                this.color = `rgba(59, 130, 246, ${Math.random() * 0.6})`;
             }
             update() {
                 if (this.x > canvas.width || this.x < 0) this.dx = -this.dx;
@@ -81,7 +81,7 @@ export const initBackground = () => {
                 for (let b = a; b < particlesArray.length; b++) {
                     let d = Math.hypot(particlesArray[a].x - particlesArray[b].x, particlesArray[a].y - particlesArray[b].y);
                     if (d < 120) {
-                        ctx.strokeStyle = `rgba(59, 130, 246, ${0.1 - d / 1200})`;
+                        ctx.strokeStyle = `rgba(59, 130, 246, ${0.5 - d / 240})`;
                         ctx.lineWidth = 1;
                         ctx.beginPath();
                         ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
@@ -249,50 +249,99 @@ export const initBackground = () => {
     }
 
     // ----------------------------------------------------------------------
-    // THEME 4: DATA WAVES (Improved Interaction)
+    // THEME 4: NEON FLOW (Fluid Particles)
     // ----------------------------------------------------------------------
-    const initDataWaves = () => {
-        const rows = 40;
-        const cols = 60;
-        const gapX = canvas.width / cols;
-        const gapY = canvas.height / rows;
+    const initNeonFlow = () => {
+        const particles = [];
+        const particleCount = 700;
+        const flowScale = 0.005;
+        let time = 0;
+        
+        class FlowParticle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = 0;
+                this.vy = 0;
+                this.history = [];
+                this.maxHistory = 8;
+                this.speed = Math.random() * 2 + 1.5;
+                // High contrast premium colors: Cyan to Electric Purple
+                this.hue = Math.random() > 0.5 ? 190 + Math.random() * 20 : 260 + Math.random() * 20;
+            }
+
+            update() {
+                // Evolving Flow Field
+                // Angle based on position and time
+                const angle = (Math.cos(this.x * flowScale + time) + Math.sin(this.y * flowScale + time)) * Math.PI;
+                
+                // Target velocity vector based on angle
+                const targetVx = Math.cos(angle) * this.speed;
+                const targetVy = Math.sin(angle) * this.speed;
+
+                // Smoothly steer towards target velocity (Inertia)
+                this.vx += (targetVx - this.vx) * 0.1;
+                this.vy += (targetVy - this.vy) * 0.1;
+
+                // MOUSE INTERACTION DISTURBANCE
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 200) {
+                    const repulsionForce = (200 - dist) * 0.05;
+                    const angleToMouse = Math.atan2(dy, dx);
+                    // Push away perpendicular to radius for a "swirl" feel, or just radial repulsion
+                    // Let's do radial repulsion + slight swirl
+                    this.vx -= Math.cos(angleToMouse) * repulsionForce;
+                    this.vy -= Math.sin(angleToMouse) * repulsionForce;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap around edges
+                if (this.x < 0) { this.x = canvas.width; this.history = []; }
+                else if (this.x > canvas.width) { this.x = 0; this.history = []; }
+                if (this.y < 0) { this.y = canvas.height; this.history = []; }
+                else if (this.y > canvas.height) { this.y = 0; this.history = []; }
+
+                // Trail History
+                this.history.push({x: this.x, y: this.y});
+                if (this.history.length > this.maxHistory) this.history.shift();
+            }
+
+            draw() {
+                 if (this.history.length < 2) return;
+                 
+                 ctx.beginPath();
+                 ctx.moveTo(this.history[0].x, this.history[0].y);
+                 for (let i = 1; i < this.history.length; i++) {
+                     ctx.lineTo(this.history[i].x, this.history[i].y);
+                 }
+                 
+                 // Fade out tail
+                 ctx.strokeStyle = `hsla(${this.hue}, 90%, 60%, 0.075)`;
+                 ctx.lineWidth = 1.5;
+                 ctx.stroke();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new FlowParticle());
+        }
 
         const animate = () => {
             requestAnimationFrame(animate);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const time = Date.now() * 0.002;
-
-            for (let j = 0; j < rows; j++) {
-                ctx.beginPath();
-                for (let i = 0; i < cols; i++) {
-                    const x = i * gapX;
-                    const baseX = x;
-                    const baseY = j * gapY * 1.5 - (rows * gapY * 0.25); // Center vertically more or less
-
-                    // Distance from mouse for local affect
-                    const dx = mouse.x - baseX;
-                    const dy = mouse.y - baseY;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    // Local distortion based on mouse distance
-                    // If close, wave gets bigger and faster
-                    let localAmp = 0;
-                    if (dist < 300) {
-                        localAmp = (300 - dist) * 0.2; // Max 60px push
-                    }
-
-                    const y = baseY + Math.sin(i * 0.2 + time + (j * 0.1)) * (10 + localAmp * 0.5);
-
-                    // Mouse also pushes the lines apart vertically slightly
-                    const pushY = (dist < 200) ? (200 - dist) * 0.2 : 0;
-
-                    if (i === 0) ctx.moveTo(x, y + pushY);
-                    else ctx.lineTo(x, y + pushY);
-                }
-                const alpha = 0.3 - (Math.abs(j - rows / 2) / rows) * 0.3; // Fade edges
-                ctx.strokeStyle = `rgba(59, 130, 246, ${alpha + 0.1})`;
-                ctx.stroke();
+            time += 0.005; 
+            
+            // Motion Blur / Fade effect
+            ctx.fillStyle = 'rgba(3, 4, 7, 0.2)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let p of particles) {
+                p.update();
+                p.draw();
             }
         }
         animate();
@@ -367,7 +416,7 @@ export const initBackground = () => {
     // ----------------------------------------------------------------------
     // RANDOMIZER
     // ----------------------------------------------------------------------
-    const effects = [initConstellation, initCircuitFlow, initDeepSpace, initDataWaves, initHexGrid];
+    const effects = [initConstellation,initCircuitFlow,initDeepSpace,initNeonFlow, initHexGrid];
     const randomIndex = Math.floor(Math.random() * effects.length);
     console.log("Loading Background Effect:", randomIndex);
     effects[randomIndex]();
