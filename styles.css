@@ -132,18 +132,14 @@ body.hover-effect .cursor-follower {
 /* -------------------------------------------------------------------------- */
 #id-card-container {
     position: absolute;
-    /* Scrolls with page */
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;
-    /* Cover initial viewport to allow physics to play within */
+    height: 200vh; /* Extended for scrolling */
     z-index: 0;
-    /* Below nav (100) but above background */
     pointer-events: none;
     overflow: visible;
-    perspective: 1200px;
-    /* Enable 3D Depth */
+    perspective: 1000px; /* Enable 3D space */
 }
 
 #lanyard {
@@ -157,129 +153,96 @@ body.hover-effect .cursor-follower {
 
 #id-card {
     position: absolute;
-    /* Initial position - will be controlled by JS physics */
     top: 0;
     left: 50%;
-    width: 260px;
-    /* Slightly wider for better content fit */
-    height: 400px;
-    transform-style: preserve-3d;
-    /* Remove visuals from container, it's just a pivot now */
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    display: block;
-    /* Was flex, but flex should be on the face */
-}
-
-/* -------------------------------------------------------------------------- */
-/*                               3D FACES                                     */
-/* -------------------------------------------------------------------------- */
-.card-face {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    /* Hide back of faces so they don't visually interfere */
-    border-radius: 24px;
-    /* More rounded as requested */
-}
-
-/* FRONT FACE */
-.card-face.front {
-    background: rgba(8, 10, 15, 0.95);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.2),
-        0 20px 50px rgba(0, 0, 0, 0.6),
-        inset 0 0 40px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    transform: translateZ(6px);
-    /* Front of stack */
-    z-index: 10;
-    /* Ensure content stays on top */
-}
-
-/* BACK FACE */
-.card-face.back {
-    background: linear-gradient(135deg, var(--bg-secondary), #000);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transform: rotateY(180deg) translateZ(6px);
-    /* Back of stack */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-}
-
-.card-face.back::after {
-    content: '';
-    width: 80px;
-    height: 80px;
-    background: url('favicon.svg') no-repeat center center;
-    /* Assuming favicon exists */
-    background-size: contain;
-    opacity: 0.1;
-}
-
-/* VOLUMETRIC LAYERS */
-.thickness-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--accent-primary);
-    border-radius: 24px;
-    pointer-events: none;
-    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
-    /* Definition for each slice */
-}
-
-
-#id-card {
-    color: var(--text-primary);
-    pointer-events: auto;
-    /* restore interaction */
-    cursor: grab;
-    transform-origin: 50% 18px;
-    z-index: 2;
-    /* 3D Transform settings */
+    width: 230px;
+    height: 350px;
+    
+    /* Container only handles 3D transform */
     transform-style: preserve-3d;
     will-change: transform;
-
+    cursor: grab;
+    z-index: 2;
 }
 
 #id-card:active {
     cursor: grabbing;
 }
 
-.card-header,
-.card-body,
-.card-footer {
-    transform: translateZ(20px);
-    /* Bring content well forward to avoid clipping */
-    position: relative;
-    z-index: 10;
+/* --- 3D LAYER STACK (The Thickness) --- */
+.card-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    /* Gradient matching Thomas-Lamotte text */
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    transform: translateZ(var(--z));
+    pointer-events: none;
 }
 
-.card-header {
-    padding: 35px 24px 20px;
+/* FRONT FACE (Glass Content) */
+.glass-face {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    
+    /* Glassmorphism */
+    background: rgba(10, 15, 25, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    
+    /* Gradient Border Effect */
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    box-shadow: 
+        inset 0 0 20px rgba(139, 92, 246, 0.05),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.15);
+        
+    z-index: 10;
+    transform: translateZ(0px); /* Sits at the very front */
+    
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    position: relative;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto; /* Allow interaction with buttons inside */
 }
+
+/* Shine effect on Glass Face */
+.glass-face::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0) 40%
+    );
+    pointer-events: none;
+}
+
+/* --- LAYOUT UPDATES --- */
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+
+
+
+
 
 /* Attachment point at top of card */
-.card-header::before {
-    content: '';
+.card-attachment {
     position: absolute;
     top: 8px;
     left: 50%;
@@ -287,99 +250,155 @@ body.hover-effect .cursor-follower {
     width: 20px;
     height: 20px;
     background: radial-gradient(circle, #1e293b 0%, #0f172a 70%);
-    border: 2px solid #3b82f6;
+    border: 2px solid var(--accent-primary);
     border-radius: 50%;
     box-shadow:
-        0 0 10px rgba(59, 130, 246, 0.5),
+        0 0 10px rgba(139, 92, 246, 0.5), /* Violet glow */
         inset 0 0 5px rgba(59, 130, 246, 0.3);
     z-index: 15;
 }
 
-/* Inner hole detail */
-.card-header::after {
+.card-attachment::after {
     content: '';
     position: absolute;
-    top: 14px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     width: 8px;
     height: 8px;
     background: rgba(0, 0, 0, 0.8);
     border: 1px solid rgba(59, 130, 246, 0.4);
     border-radius: 50%;
-    z-index: 16;
+}
+
+.card-header {
+    padding: 25px 20px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-role {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     color: var(--accent-primary);
     font-weight: 700;
 }
 
-.card-logo {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 800;
-    font-size: 0.9rem;
-}
-
-.card-body {
-    padding: 30px 24px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.card-photo {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, var(--bg-secondary), #000);
-    border-radius: 12px;
-    border: 1px solid var(--glass-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: var(--text-secondary);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-}
-
-.card-info h2 {
-    font-size: 1.8rem;
-    line-height: 1;
-    margin-bottom: 5px;
-}
-
-.card-info h3 {
-    font-size: 1.4rem;
-    font-weight: 400;
-    color: var(--text-secondary);
-    margin-bottom: 20px;
-}
-
-.card-details {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-size: 0.85rem;
+.id-number {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
     color: var(--text-secondary);
     opacity: 0.8;
 }
 
-.card-details i {
-    width: 20px;
-    color: var(--accent-secondary);
+.card-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--text-primary);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.card-body {
+    padding: 30px 20px 25px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* Terminal Icon - Glassy Variant */
+.card-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.03); /* Very subtle fill */
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--accent-primary);
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-icon::before {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: skewX(-20deg) translateX(-150%);
+    animation: icon-shine 4s infinite 2s;
+}
+
+@keyframes shine {
+    to { background-position: 200% center; }
+}
+
+@keyframes icon-shine {
+    to { transform: skewX(-20deg) translateX(150%); }
+}
+
+/* Status Pill */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulse 2s infinite;
+}
+
+/* Tech Stack Grid */
+.tech-stack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    width: 100%;
+    max-width: 160px;
+}
+
+.tech-stack-grid i {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease, transform 0.3s ease;
+    text-align: center;
+}
+
+.tech-stack-grid i:hover {
+    color: var(--accent-primary);
+    transform: translateY(-3px);
 }
 
 .card-footer {
-    padding: 20px 24px;
+    padding: 15px 20px;
     background: rgba(0, 0, 0, 0.2);
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0 0 24px 24px;
 }
 
 .barcode {
@@ -398,48 +417,6 @@ body.hover-effect .cursor-follower {
     font-size: 0.65rem;
     opacity: 0.5;
     letter-spacing: 1px;
-}
-
-/* Access Pass Styling */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background: #10b981;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-    animation: pulse 2s infinite;
-}
-
-.tech-stack-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-top: 10px;
-}
-
-.tech-stack-grid i {
-    font-size: 1.5rem;
-    color: var(--text-secondary);
-    transition: color 0.3s ease, transform 0.3s ease;
-}
-
-.tech-stack-grid i:hover {
-    color: var(--accent-primary);
-    transform: translateY(-3px);
 }
 
 @keyframes pulse {

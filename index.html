@@ -26,36 +26,42 @@
     <!-- Interactive ID Card Container -->
     <div id="id-card-container">
         <canvas id="lanyard"></canvas>
-        <div id="id-card" class="glass-card">
-            <!-- 3D Sides -->
-            <div class="card-face front">
+        <div id="id-card">
+            <!-- 3D Layers for Thickness (Rounded corners preserved) -->
+            <div class="card-layer" style="--z: -1px;"></div>
+            <div class="card-layer" style="--z: -2px;"></div>
+            <div class="card-layer" style="--z: -3px;"></div>
+            <div class="card-layer" style="--z: -4px;"></div>
+            <div class="card-layer" style="--z: -5px;"></div>
+
+            <!-- Front Content Face -->
+            <div class="glass-face">
+                <div class="card-attachment"></div>
                 <div class="card-header">
-                    <span class="card-role">DEVELOPER ACCESS</span>
+                    <div class="header-left">
+                        <span class="card-role">DEVELOPER ACCESS</span>
+                        <span class="id-number">LEVEL: JUNIOR</span>
+                    </div>
                     <div class="card-logo">TTL<span class="dot">.</span></div>
                 </div>
                 <div class="card-body">
-                    <div class="card-photo">
+                    <div class="card-icon">
                         <i class="fas fa-terminal"></i>
                     </div>
-                    <div class="card-info">
-                        <div class="status-pill"><span class="status-dot"></span>Available 2026</div>
-                        <div class="tech-stack-grid">
-                            <i class="fab fa-js"></i>
-                            <i class="fab fa-react"></i>
-                            <i class="fab fa-node"></i>
-                            <i class="fab fa-python"></i>
-                            <i class="fas fa-database"></i>
-                            <i class="fab fa-git-alt"></i>
-                        </div>
+                    <div class="status-pill"><span class="status-dot"></span>Available 2026</div>
+                    <div class="tech-stack-grid">
+                        <i class="fab fa-js"></i>
+                        <i class="fab fa-react"></i>
+                        <i class="fab fa-node"></i>
+                        <i class="fab fa-python"></i>
+                        <i class="fas fa-database"></i>
+                        <i class="fab fa-git-alt"></i>
                     </div>
                 </div>
                 <div class="card-footer">
                     <div class="barcode"></div>
-                    <span class="id-number">LEVEL: JUNIOR</span>
                 </div>
             </div>
-            <div class="card-face back"></div>
-            <div class="card-face back"></div>
         </div>
     </div>
 
