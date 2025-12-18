@@ -289,39 +289,87 @@ export const initPhysics = () => {
         const attachX = cardBody.position.x - sin * attachOffsetY;
         const attachY = cardBody.position.y + cos * attachOffsetY;
 
-        // Draw Multi-Segment Rope
+        // Draw Multi-Segment Rope (Corporate Lanyard Style)
+        
+        // 1. Draw the Strap (Thick Line)
         ctx.beginPath();
         ctx.moveTo(pivot.position.x, pivot.position.y);
         
-        // Curve through segments
+        // Collect points for curve
+        const points = [pivot.position];
         for (let i = 0; i < ropeSegments.length; i++) {
-            const pos = ropeSegments[i].position;
-            ctx.lineTo(pos.x, pos.y);
+            points.push(ropeSegments[i].position);
         }
-        ctx.lineTo(attachX, attachY); // Connect to card
+        points.push({ x: attachX, y: attachY }); // Add card attachment point
+
+        // Draw curve
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
         
-        // Styles
+        // Setup Gradient for Strap (Premium Look)
+        const gradient = ctx.createLinearGradient(pivot.position.x, pivot.position.y, attachX, attachY);
+        gradient.addColorStop(0, '#0f172a');   // Top: Very dark slate (blends with ceiling)
+        gradient.addColorStop(0.4, '#312e81'); // Middle: Deep Indigo
+        gradient.addColorStop(1, '#581c87');    // Bottom: Deep Purple (Matches card accent)
+
+        // Strap Body
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = gradient; 
+        ctx.lineWidth = 14; 
+        ctx.stroke();
         
-        // Outer glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(139, 92, 246, 0.4)'; // Violet glow
-        ctx.strokeStyle = 'rgba(139, 92, 246, 0.25)';
-        ctx.lineWidth = 4;
+        // Strap Border Highlight (for 3D effect)
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 14; 
         ctx.stroke();
 
-        // Core line
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#3b82f6'; // Blue core
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // 2. Draw Branding Text "TTL." along the curve
+        ctx.font = 'bold 9px Arial';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let i = 0; i < points.length - 1; i++) {
+            // Only draw on every other segment to avoid crowding
+            if (i % 2 !== 0) continue; 
+
+            const p1 = points[i];
+            const p2 = points[i+1];
+            
+            // Calculate midpoint
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            
+            // Calculate angle
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+            ctx.save();
+            ctx.translate(midX, midY);
+            ctx.rotate(angle);
+            ctx.fillText("TTL.", 0, 0);
+            ctx.restore();
+        }
+
+        // Clip the strap attachment to not bleed over branding (Optional, but clean)
+        // ... (Using simple circle at end is fine)
 
         // Draw connector at card attachment
         ctx.save();
         ctx.translate(attachX, attachY);
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.7)';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        // A slightly nicer metal clip shape
+        ctx.rect(-8, -10, 16, 12); 
+        ctx.fill();
         ctx.fillStyle = '#1e293b';
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, Math.PI * 2);
