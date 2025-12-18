@@ -242,6 +242,27 @@ export const initPhysics = () => {
     resize(); // Initial call
     window.addEventListener('resize', resize);
 
+    // ====== SCROLL BOUNCE EFFECT ======
+    let lastScrollY = window.scrollY;
+    
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        const deltaY = currentScrollY - lastScrollY;
+        
+        // Apply force based on scroll direction
+        // limit force to avoid exploding physics on super fast scroll
+        const forceY = Math.max(-25, Math.min(25, deltaY * 0.25)); 
+        
+        if (Math.abs(deltaY) > 0) {
+            Body.applyForce(cardBody, cardBody.position, { 
+                x: 0, 
+                y: forceY 
+            });
+        }
+
+        lastScrollY = currentScrollY;
+    });
+
     // ====== FLIP SYSTEM ======
     let isFlipped = false;
     let currentFlipAngle = 0;
