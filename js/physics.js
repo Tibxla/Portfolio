@@ -36,15 +36,13 @@ export const initPhysics = () => {
     const world = engine.world;
 
     // ====== RESIZE HANDLING ======
-    const resize = () => {
-        canvas.width = container.offsetWidth || window.innerWidth;
-        canvas.height = window.innerHeight * 2; // Extended canvas for scrolling
-    };
-    resize();
-    window.addEventListener('resize', resize);
+    // Defined properly later to access bodies
 
     // ====== PIVOT POINT (fixed anchor at top) ======
-    const pivotX = window.innerWidth * 0.75;
+    /* Initial Pivot X */
+    let pivotX = window.innerWidth * 0.75;
+    if (window.innerWidth < 1000) pivotX = window.innerWidth * 0.5;
+    
     const pivotY = 0;
 
     const pivot = Bodies.circle(pivotX, pivotY, 5, {
@@ -69,9 +67,9 @@ export const initPhysics = () => {
         cardWidth,
         cardHeight,
         {
-            density: 0.03, // Heavy enough for inertia, light enough to not stretch rope
+            density: 0.03, // Heavy enough for inertia
             friction: 0.3,
-            frictionAir: 0.04, // Standard air friction
+            frictionAir: 0.05, // Standard air friction
             restitution: 0.0,
             angle: 0,
             angularVelocity: 0,
@@ -140,7 +138,7 @@ export const initPhysics = () => {
 
     // FORCE INITIAL FALL (Simulation of "drop")
     // Move card move card up to start position
-    Body.setPosition(cardBody, { x: pivotX, y: pivotY - 200 }); // "Throw" it up
+    Body.setPosition(cardBody, { x: pivotX - 50, y: pivotY - 1000 }); // "Throw" it up
 
 
     // ====== DRAG SYSTEM ======
@@ -205,6 +203,44 @@ export const initPhysics = () => {
     window.addEventListener('touchmove', onMouseMove, { passive: true });
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('touchend', onMouseUp, { passive: true });
+
+    // ====== RESPONSIVE RESIZE HANDLING ======
+    const resize = () => {
+        const width = window.innerWidth;
+        
+        // Hide card on smaller screens (< 900px)
+        if (width < 900) {
+            container.style.opacity = '0';
+            container.style.visibility = 'hidden';
+            container.style.pointerEvents = 'none'; // Ensure no interactions
+        } else {
+            container.style.opacity = '1';
+            container.style.visibility = 'visible';
+            container.style.pointerEvents = 'none'; // Container is none, children are auto (see CSS)
+        }
+
+        canvas.width = container.offsetWidth || window.innerWidth;
+        canvas.height = window.innerHeight * 2;
+        
+        // Recalculate target Pivot X
+        let newPivotX = width * 0.75;
+        // Even if hidden, we keep the logic consistent or fallback to centered
+        if (width < 900) {
+            newPivotX = width * 0.5; 
+        }
+        
+        const deltaX = newPivotX - pivot.position.x;
+        
+        // Translate entire physics assembly
+        Body.translate(pivot, { x: deltaX, y: 0 });
+        Body.translate(cardBody, { x: deltaX, y: 0 });
+        
+        ropeSegments.forEach(segment => {
+            Body.translate(segment, { x: deltaX, y: 0 });
+        });
+    };
+    resize(); // Initial call
+    window.addEventListener('resize', resize);
 
     // ====== FLIP SYSTEM ======
     let isFlipped = false;
