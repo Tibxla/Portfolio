@@ -28,7 +28,9 @@ export const initPhysics = () => {
 
     // Create engine
     const engine = Engine.create({
-        gravity: { x: 0, y: 1 }
+        gravity: { x: 0, y: 3 }, // Increased gravity (1.0 -> 1.5) for "Earth-like" snap
+        positionIterations: 50, // High iterations for rigid, non-elastic rope
+        velocityIterations: 10
     });
 
     const world = engine.world;
@@ -47,6 +49,7 @@ export const initPhysics = () => {
 
     const pivot = Bodies.circle(pivotX, pivotY, 5, {
         isStatic: true,
+        collisionFilter: { group: -1 }, // Non-colliding pivot
         render: { visible: false }
     });
 
@@ -55,41 +58,90 @@ export const initPhysics = () => {
     // ====== CARD BODY ======
     const cardWidth = 230;
     const cardHeight = 350;
-    const ropeLength = 350;
+    const ropeLength = 120; // Shorter rope
+    const ropeSegmentsCount = 10; // Fewer segments = less stretch
+    const segmentLength = ropeLength / ropeSegmentsCount;
 
-    // Start card hanging at rest position
+    // Start card hanging at rest position but heavier
     const cardBody = Bodies.rectangle(
         pivotX,
-        pivotY + ropeLength + cardHeight / 2 - 18, // Position based on rope length
+        pivotY + ropeLength + cardHeight / 2 - 18, 
         cardWidth,
         cardHeight,
         {
-            density: 0.001,
+            density: 0.03, // Heavy enough for inertia, light enough to not stretch rope
             friction: 0.3,
-            frictionAir: 0.05, // Increased air friction to prevent spinning
-            restitution: 0.1,
+            frictionAir: 0.04, // Standard air friction
+            restitution: 0.0,
             angle: 0,
             angularVelocity: 0,
+            collisionFilter: { group: 1 }, // Default collision group
             render: { visible: false }
         }
     );
 
     Composite.add(world, cardBody);
 
-    // ====== ROPE CONSTRAINT ======
-    const attachPointY = -cardHeight / 2 + 18; // 18px from top edge
+    // ====== REALISTIC ROPE CHAIN ======
+    const ropeSegments = [];
+    const ropeConstraints = [];
 
-    const rope = Constraint.create({
-        bodyA: pivot,
+    // Create segments
+    let prevBody = pivot;
+    
+    for (let i = 0; i < ropeSegmentsCount; i++) {
+        // Pivot/First Node Logic
+        const isFirst = i === 0;
+        
+        // Invisible small bodies for rope nodes
+        const body = Bodies.circle(
+            pivotX, 
+            pivotY + (i + 1) * segmentLength, 
+            2, 
+            {
+                density: 1, // Heavier segments help stability
+                frictionAir: 0.01, // Standard friction
+                collisionFilter: { group: -1 }, // Disable collisions between segments
+                render: { visible: false }
+            }
+        );
+        
+        Composite.add(world, body);
+        ropeSegments.push(body);
+
+        const constraint = Constraint.create({
+            bodyA: prevBody,
+            bodyB: body,
+            length: segmentLength,
+            stiffness: 1, // Max stiffness
+            damping: 1, // Higher damping for "dry" feel (absorbs shock)
+            render: { visible: false }
+        });
+        
+        Composite.add(world, constraint);
+        ropeConstraints.push(constraint);
+        
+        prevBody = body;
+    }
+
+    // Connect last segment to Card
+    const attachPointY = -cardHeight / 2 + 18;
+    const finalConstraint = Constraint.create({
+        bodyA: prevBody,
         bodyB: cardBody,
-        pointA: { x: 0, y: 0 },
         pointB: { x: 0, y: attachPointY },
-        length: ropeLength,
-        stiffness: 1.0, // Rigid rope
-        damping: 0.3 // More damping to prevent oscillation
+        length: segmentLength,
+        stiffness: 1,
+        damping: 0.5, // Higher damping
+        render: { visible: false }
     });
+    Composite.add(world, finalConstraint);
+    ropeConstraints.push(finalConstraint);
 
-    Composite.add(world, rope);
+    // FORCE INITIAL FALL (Simulation of "drop")
+    // Move card move card up to start position
+    Body.setPosition(cardBody, { x: pivotX, y: pivotY - 200 }); // "Throw" it up
+
 
     // ====== DRAG SYSTEM ======
     let isDragging = false;
@@ -117,8 +169,8 @@ export const initPhysics = () => {
             bodyB: cardBody,
             pointB: localPoint,
             length: 0,
-            stiffness: 0.9,
-            damping: 0.5
+            stiffness: 0.1, // Much softer grab to prevent vibration/fighting with the rigid rope
+            damping: 0.1
         });
         Composite.add(world, dragConstraint);
 
@@ -180,15 +232,26 @@ export const initPhysics = () => {
         const attachX = cardBody.position.x - sin * attachOffsetY;
         const attachY = cardBody.position.y + cos * attachOffsetY;
 
-        // Draw rope (Simplified for styling consistency)
+        // Draw Multi-Segment Rope
+        ctx.beginPath();
+        ctx.moveTo(pivot.position.x, pivot.position.y);
+        
+        // Curve through segments
+        for (let i = 0; i < ropeSegments.length; i++) {
+            const pos = ropeSegments[i].position;
+            ctx.lineTo(pos.x, pos.y);
+        }
+        ctx.lineTo(attachX, attachY); // Connect to card
+        
+        // Styles
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        
         // Outer glow
         ctx.shadowBlur = 15;
         ctx.shadowColor = 'rgba(139, 92, 246, 0.4)'; // Violet glow
         ctx.strokeStyle = 'rgba(139, 92, 246, 0.25)';
         ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(pivot.position.x, pivot.position.y);
-        ctx.lineTo(attachX, attachY);
         ctx.stroke();
 
         // Core line
@@ -223,20 +286,37 @@ export const initPhysics = () => {
 
         // Dynamic 3D Tilt based on velocity
         const velocityX = cardBody.velocity.x;
-        const tiltAngle = -velocityX * 5; 
-        const clampedTilt = Math.max(-25, Math.min(25, tiltAngle));
+        const velocityY = cardBody.velocity.y;
+        
+        // Horizontal Tilt (Left/Right)
+        const tiltAngleY = -velocityX * 5; 
+        const clampedTiltY = Math.max(-55, Math.min(55, tiltAngleY));
+
+        // Vertical Tilt (Top/Bottom) - Pivoting around top
+        // Positive velocity (falling) -> Tilt BACK (negative rotateX) to look like drag
+        // Negative velocity (rising) -> Tilt FRONT (positive rotateX)
+        const tiltAngleX = velocityY * 5; 
+        const clampedTiltX = Math.max(-55, Math.min(55, tiltAngleX));
 
         // Set position (left/top represent the center)
         cardElement.style.left = `${cardX}px`;
         cardElement.style.top = `${cardY}px`;
         
-        // Combine Z-rotation (physics) + Y-rotation (flip + tilt) + X-rotation (tilt)
-        // Note: Adding flip angle to Y rotation
+        // Pivot Offset: Distance from center to attachment point
+        // cardHeight/2 (175) - 18px = 157px
+        const pivotOffset = 157;
+
+        // Combine transforms:
+        // 1. Center the element (-50%, -50%)
+        // 2. Apply Physics Rotation (Z) around center
+        // 3. Apply Horizontal Flip/Tilt (Y) around center
+        // 4. Apply Vertical Tilt (X) pivoting around TOP:
+        //    Move up to pivot -> Rotate X -> Move back down
         cardElement.style.transform = `
             translate(-50%, -50%) 
             rotate(${cardAngle}rad) 
-            rotateY(${clampedTilt + currentFlipAngle}deg)
-            rotateX(${Math.abs(clampedTilt) * 0.1}deg)
+            rotateY(${clampedTiltY + currentFlipAngle}deg)
+            translateY(-${pivotOffset}px) rotateX(${clampedTiltX}deg) translateY(${pivotOffset}px)
         `;
 
         requestAnimationFrame(render);
