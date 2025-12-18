@@ -1,6 +1,21 @@
 /* -------------------------------------------------------------------------- */
 /*                               RESET & VARS                                 */
 /* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                               Z-INDEX REGISTRY                             */
+/* -------------------------------------------------------------------------- */
+/*
+   9999: .cursor, .cursor-follower (Topmost)
+   100:  .navbar (Sticky navigation)
+   16:   .card-header::after
+   15:   .card-header::before
+   10:   .card-face.front, .card-content
+   2:    #id-card (Physics body)
+   1:    #lanyard, .card-face.back, .hero-content
+   0:    #id-card-container (Physics container)
+   -1:   #bg-canvas (Fixed background)
+*/
+
 :root {
     /* Palette Premium sombre */
     --bg-color: #030407;
