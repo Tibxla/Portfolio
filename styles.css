@@ -194,7 +194,7 @@ body.hover-effect .cursor-follower {
     border-radius: 20px;
     
     /* Glassmorphism */
-    background: rgba(10, 15, 25, 0.8);
+    background: rgba(10, 15, 25, 0.85); /* Slightly more opaque to hide back */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     
@@ -205,12 +205,21 @@ body.hover-effect .cursor-follower {
         inset 1px 1px 0 rgba(255, 255, 255, 0.15);
         
     z-index: 10;
-    transform: translateZ(0px); /* Sits at the very front */
+    backface-visibility: hidden; /* Important for flip */
     
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    pointer-events: auto; /* Allow interaction with buttons inside */
+    pointer-events: auto;
+}
+
+.glass-face.front {
+    transform: translateZ(0px);
+}
+
+.glass-face.back {
+    transform: translateZ(-6px) rotateY(180deg); /* Behind the stack and flipped */
+    display: flex; /* Re-declare flex for the back */
 }
 
 /* Shine effect on Glass Face */
@@ -300,6 +309,13 @@ body.hover-effect .cursor-follower {
     font-size: 1rem;
     color: var(--text-primary);
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    transition: text-shadow 0.3s ease, transform 0.3s ease;
+    cursor: default;
+}
+
+.card-logo:hover {
+    text-shadow: 0 0 15px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.4);
+    transform: scale(1.05);
 }
 
 .card-body {
@@ -382,14 +398,40 @@ body.hover-effect .cursor-follower {
 .tech-stack-grid i {
     font-size: 1.5rem;
     color: var(--text-secondary);
-    transition: color 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy transition */
     text-align: center;
+    cursor: pointer;
 }
 
 .tech-stack-grid i:hover {
-    color: var(--accent-primary);
-    transform: translateY(-3px);
+    color: #fff;
+    transform: translateY(-5px) scale(1.2);
+    text-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
 }
+
+
+/* --- BACK FACE CONTENT STYLES --- */
+.qr-placeholder {
+    width: 120px;
+    height: 120px;
+    background: white;
+    padding: 10px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    color: var(--bg-color);
+}
+
+.contact-lines p {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: 500;
+}
+
 
 .card-footer {
     padding: 15px 20px;

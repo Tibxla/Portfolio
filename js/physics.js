@@ -23,7 +23,8 @@ export const initPhysics = () => {
           Bodies = Matter.Bodies,
           Body = Matter.Body,
           Composite = Matter.Composite,
-          Constraint = Matter.Constraint;
+          Constraint = Matter.Constraint,
+          Vector = Matter.Vector;
 
     // Create engine
     const engine = Engine.create({
@@ -105,9 +106,16 @@ export const initPhysics = () => {
         const mouseX = (e.clientX || e.touches?.[0]?.clientX) - containerRect.left;
         const mouseY = (e.clientY || e.touches?.[0]?.clientY) - containerRect.top;
 
+        // Calculate grab point in local body coordinates
+        const relativeX = mouseX - cardBody.position.x;
+        const relativeY = mouseY - cardBody.position.y;
+        // Rotate the vector inverse to the body's rotation to get local point
+        const localPoint = Vector.rotate({ x: relativeX, y: relativeY }, -cardBody.angle);
+
         dragConstraint = Constraint.create({
             pointA: { x: mouseX, y: mouseY },
             bodyB: cardBody,
+            pointB: localPoint,
             length: 0,
             stiffness: 0.9,
             damping: 0.5
@@ -146,6 +154,17 @@ export const initPhysics = () => {
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('touchend', onMouseUp, { passive: true });
 
+    // ====== FLIP SYSTEM ======
+    let isFlipped = false;
+    let currentFlipAngle = 0;
+    const targetFlipAngle0 = 0;
+    const targetFlipAngle180 = 180;
+
+    // Use double click to flip to avoid conflict with drag
+    cardElement.addEventListener('dblclick', () => {
+        isFlipped = !isFlipped;
+    });
+
     // ====== RENDER LOOP ======
     const render = () => {
         // Update physics
@@ -161,37 +180,22 @@ export const initPhysics = () => {
         const attachX = cardBody.position.x - sin * attachOffsetY;
         const attachY = cardBody.position.y + cos * attachOffsetY;
 
-        // Draw rope
+        // Draw rope (Simplified for styling consistency)
+        // Outer glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(139, 92, 246, 0.4)'; // Violet glow
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.25)';
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(pivot.position.x, pivot.position.y);
         ctx.lineTo(attachX, attachY);
-        
-        // Outer glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
-        ctx.lineWidth = 12;
         ctx.stroke();
 
         // Core line
-        ctx.beginPath();
-        ctx.moveTo(pivot.position.x, pivot.position.y);
-        ctx.lineTo(attachX, attachY);
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#3b82f6'; // Blue core
+        ctx.lineWidth = 2;
         ctx.stroke();
-
-        // Edge highlight
-        ctx.beginPath();
-        ctx.moveTo(pivot.position.x, pivot.position.y);
-        ctx.lineTo(attachX, attachY);
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-        ctx.strokeStyle = 'rgba(139, 92, 246, 0.35)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
 
         // Draw connector at card attachment
         ctx.save();
@@ -200,7 +204,7 @@ export const initPhysics = () => {
         ctx.shadowColor = 'rgba(59, 130, 246, 0.7)';
         ctx.fillStyle = '#1e293b';
         ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#3b82f6';
         ctx.lineWidth = 2;
@@ -212,24 +216,27 @@ export const initPhysics = () => {
         const cardY = cardBody.position.y;
         const cardAngle = cardBody.angle;
 
+        // Smoothly interpolate flip angle
+        const target = isFlipped ? targetFlipAngle180 : targetFlipAngle0;
+        // Simple lerp for smooth transition
+        currentFlipAngle += (target - currentFlipAngle) * 0.1;
+
         // Dynamic 3D Tilt based on velocity
         const velocityX = cardBody.velocity.x;
-        const tiltAngle = -velocityX * 5; // Tilt factor (adjust for sensitivity)
-        
-        // Limit max tilt
+        const tiltAngle = -velocityX * 5; 
         const clampedTilt = Math.max(-25, Math.min(25, tiltAngle));
 
         // Set position (left/top represent the center)
         cardElement.style.left = `${cardX}px`;
         cardElement.style.top = `${cardY}px`;
         
-        // Combine Z-rotation (physics) with Y-rotation (velocity tilt)
-        // Perspective is handled by container
+        // Combine Z-rotation (physics) + Y-rotation (flip + tilt) + X-rotation (tilt)
+        // Note: Adding flip angle to Y rotation
         cardElement.style.transform = `
             translate(-50%, -50%) 
             rotate(${cardAngle}rad) 
-            rotateY(${clampedTilt}deg)
-            rotateX(${Math.abs(clampedTilt) * 0.1}deg) /* Slight X tilt for realism */
+            rotateY(${clampedTilt + currentFlipAngle}deg)
+            rotateX(${Math.abs(clampedTilt) * 0.1}deg)
         `;
 
         requestAnimationFrame(render);
