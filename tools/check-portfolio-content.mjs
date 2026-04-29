@@ -33,7 +33,6 @@ const forbiddenText = [
   'stage en informatique de au moins 8 semaines',
   'mars 2026',
   'Futur Expert FinTech',
-  'https://github.com/Tibxla/Edifig',
 ];
 
 function assert(condition, message) {
@@ -56,5 +55,13 @@ for (const text of forbiddenText) {
 
 assert(existsSync(cvPath), `Missing CV asset at ${cvPath}`);
 assert(statSync(cvPath).size > 100_000, 'CV asset is unexpectedly small');
+assert(readFileSync(cvPath).subarray(0, 5).toString() === '%PDF-', 'CV asset is not a PDF');
+
+const cvDownloadLinkPattern = new RegExp(`<a\\b[^>]*href="${cvPath}"[^>]*\\bdownload\\b`, 's');
+assert(cvDownloadLinkPattern.test(html), 'CV link must point to the PDF and include download');
+
+const edifigCard = html.match(/<article\b[^>]*>[\s\S]*?<h3>Edifig<\/h3>[\s\S]*?<\/article>/);
+assert(edifigCard, 'Missing Edifig project card');
+assert(!/href\s*=\s*["'][^"']*github/i.test(edifigCard[0]), 'Edifig card must not link to GitHub');
 
 console.log('Portfolio content checks passed.');
